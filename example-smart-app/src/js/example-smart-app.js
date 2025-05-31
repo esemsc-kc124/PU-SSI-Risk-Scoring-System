@@ -145,19 +145,45 @@
     return undefined;
   }
 
-  function appendToList(selector, items) {
+  // function appendToList(selector, items) {
+  //   const $el = $(selector);
+  //   if ($el.length === 0) return;
+  //   if (items.length === 0) {
+  //     $el.append('<li>No data available</li>');
+  //   } else {
+  //     const maxItems = 5;
+  //     items.slice(0, maxItems).forEach(i => $el.append(`<li>${i}</li>`));
+  //     if (items.length > maxItems) {
+  //       $el.append(`<li><em>See more...</em></li>`);
+  //     }
+  //   }
+  // }
+  function appendToList(selector, items, limit = 5) {
     const $el = $(selector);
-    if ($el.length === 0) return;
+    $el.empty();
+
     if (items.length === 0) {
       $el.append('<li>No data available</li>');
-    } else {
-      const maxItems = 5;
-      items.slice(0, maxItems).forEach(i => $el.append(`<li>${i}</li>`));
-      if (items.length > maxItems) {
-        $el.append(`<li><em>See more...</em></li>`);
-      }
+      return;
+    }
+
+    const limitedItems = items.slice(0, limit);
+    const hiddenItems = items.slice(limit);
+
+    // Show first `limit` items
+    limitedItems.forEach(i => $el.append(`<li>${i}</li>`));
+
+    if (hiddenItems.length > 0) {
+      const moreId = selector.replace('#', '') + '-more';
+      $el.append(`<li id="${moreId}" style="cursor:pointer; color:blue;">See more...</li>`);
+
+      $(`#${moreId}`).on('click', function () {
+        hiddenItems.forEach(i => $el.append(`<li>${i}</li>`));
+        $(this).remove(); // Remove "See more..." link
+      });
     }
   }
+
 
   window.drawVisualization = function(p) {
     $('#holder').show();
