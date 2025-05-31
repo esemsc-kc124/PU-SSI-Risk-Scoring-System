@@ -12,19 +12,29 @@
         var patient = smart.patient;
         var pt = patient.read();
         var obv = smart.patient.api.fetchAll({
-                    type: 'Observation',
-                    query: {
-                      code: {
-                        $or: ['http://loinc.org|8302-2', 'http://loinc.org|8462-4',
-                              'http://loinc.org|8480-6', 'http://loinc.org|2085-9',
-                              'http://loinc.org|2089-1', 'http://loinc.org|55284-4']
-                      }
-                    }
-                  });
+          type: 'Observation',
+          query: {
+            code: {
+              $or: [
+                'http://loinc.org|8302-2',
+                'http://loinc.org|8462-4',
+                'http://loinc.org|8480-6',
+                'http://loinc.org|2085-9',
+                'http://loinc.org|2089-1',
+                'http://loinc.org|55284-4'
+              ]
+            }
+          }
+        });
 
-        $.when(pt, obv).fail(onError);
+        // 新增 FHIR 资源访问
+        var conditionPromise = smart.patient.api.fetchAll({ type: 'Condition' });
+        var procedurePromise = smart.patient.api.fetchAll({ type: 'Procedure' });
+        var encounterPromise = smart.patient.api.fetchAll({ type: 'Encounter' });
 
-        $.when(pt, obv).done(function(patient, obv) {
+        $.when(pt, obv, conditionPromise, procedurePromise, encounterPromise).fail(onError);
+
+        $.when(pt, obv, conditionPromise, procedurePromise, encounterPromise).done(function(patient, obv, conditions, procedures, encounters) {
           var byCodes = smart.byCodes(obv, 'code');
           var gender = patient.gender;
 
@@ -60,6 +70,11 @@
           p.hdl = getQuantityValueAndUnit(hdl[0]);
           p.ldl = getQuantityValueAndUnit(ldl[0]);
 
+          // 控制台输出新资源数据，便于调试验证
+          console.log("✅ Conditions:", conditions);
+          console.log("✅ Procedures:", procedures);
+          console.log("✅ Encounters:", encounters);
+
           ret.resolve(p);
         });
       } else {
@@ -69,7 +84,6 @@
 
     FHIR.oauth2.ready(onReady, onError);
     return ret.promise();
-
   };
 
   function defaultPatient(){
@@ -108,7 +122,7 @@
         typeof ob.valueQuantity != 'undefined' &&
         typeof ob.valueQuantity.value != 'undefined' &&
         typeof ob.valueQuantity.unit != 'undefined') {
-          return ob.valueQuantity.value + ' ' + ob.valueQuantity.unit;
+      return ob.valueQuantity.value + ' ' + ob.valueQuantity.unit;
     } else {
       return undefined;
     }
