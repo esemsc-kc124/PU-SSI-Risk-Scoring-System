@@ -184,7 +184,7 @@
   //     });
   //   }
   // }
-  function appendToList(selector, items, limit = 5) {
+  function appendToList(selector, items, batchSize = 5) {
     const $el = $(selector);
     $el.empty();
 
@@ -193,27 +193,27 @@
       return;
     }
 
-    let shownCount = 0;
+    // Display the first batch
+    let currentIndex = 0;
+    const moreId = selector.replace('#', '') + '-more';
 
     function renderNextBatch() {
-      const nextBatch = items.slice(shownCount, shownCount + limit);
+      const nextBatch = items.slice(currentIndex, currentIndex + batchSize);
       nextBatch.forEach(i => $el.append(`<li>${i}</li>`));
-      shownCount += nextBatch.length;
+      currentIndex += batchSize;
 
-      // Remove old See More if exists
-      $el.find('.see-more-item').remove();
-
-      if (shownCount < items.length) {
-        const seeMoreItem = $(`<li class="see-more-item" style="cursor:pointer; color:blue;">See more...</li>`);
-        seeMoreItem.on('click', renderNextBatch);
-        $el.append(seeMoreItem);
+      if (currentIndex >= items.length) {
+        $(`#${moreId}`).remove(); // All items shown
       }
     }
 
-    renderNextBatch();
+    renderNextBatch(); // Show first batch
+
+    if (items.length > batchSize) {
+      $el.append(`<li id="${moreId}" style="cursor:pointer; color:blue;">See more...</li>`);
+      $(`#${moreId}`).on('click', renderNextBatch);
+    }
   }
-
-
 
   window.drawVisualization = function(p) {
     $('#holder').show();
