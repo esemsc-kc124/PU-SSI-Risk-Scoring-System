@@ -184,7 +184,7 @@
   //     });
   //   }
   // }
-  function appendToList(selector, items, batchSize = 5) {
+  function appendToList(selector, items, limit = 5) {
     const $el = $(selector);
     $el.empty();
 
@@ -193,34 +193,34 @@
       return;
     }
 
-    let currentIndex = 0;
-    const moreId = selector.replace('#', '') + '-more';
+    const visibleItems = items.slice(0, limit);
+    const hiddenItems = items.slice(limit);
 
-    function renderNextBatch() {
-      const nextBatch = items.slice(currentIndex, currentIndex + batchSize);
-      nextBatch.forEach(i => $el.append(`<li>${i}</li>`));
-      currentIndex += batchSize;
+    visibleItems.forEach(i => $el.append(`<li>${i}</li>`));
 
-      if (currentIndex >= items.length) {
-        $(`#${moreId}`).remove(); // Remove the "See more" if all shown
-      }
+    if (hiddenItems.length > 0) {
+      // Initially hidden full list
+      const hiddenHtml = hiddenItems.map(i => `<li class="hidden-item" style="display:none;">${i}</li>`).join('');
+      $el.append(hiddenHtml);
+
+      // Show more/less toggle
+      const toggleId = selector.replace('#', '') + '-toggle';
+      $el.append(`<li id="${toggleId}" style="cursor:pointer; color:blue;">Show more...</li>`);
+
+      $(document).off('click', `#${toggleId}`);
+      $(document).on('click', `#${toggleId}`, function () {
+        const $hidden = $el.find('.hidden-item');
+        const isVisible = $hidden.first().is(':visible');
+        if (isVisible) {
+          $hidden.hide();
+          $(this).text('Show more...');
+        } else {
+          $hidden.show();
+          $(this).text('Show less');
+        }
+      });
     }
-
-    // Initial batch
-    renderNextBatch();
-
-    // Add "See more" button
-    if (items.length > batchSize) {
-      $el.append(`<li id="${moreId}" style="cursor:pointer; color:blue; font-weight:bold;">• See more...</li>`);
-    }
-
-    // Always unbind first to avoid duplicate events
-    $(document).off('click', `#${moreId}`);
-    $(document).on('click', `#${moreId}`, function () {
-      renderNextBatch();
-    });
   }
-
 
   window.drawVisualization = function(p) {
     $('#holder').show();
