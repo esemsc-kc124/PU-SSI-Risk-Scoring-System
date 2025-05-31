@@ -1,4 +1,4 @@
-(function(window){
+(function(window) {
   window.extractData = function() {
     var ret = $.Deferred();
 
@@ -10,52 +10,35 @@
     function onReady(smart) {
       if (smart.hasOwnProperty('patient')) {
         var patient = smart.patient;
-
         var pt = patient.read();
-        var obv = smart.patient.api.fetchAll({
-          type: 'Observation',
-          query: {
-            code: {
-              $or: ['http://loinc.org|8302-2', 'http://loinc.org|8462-4',
-                    'http://loinc.org|8480-6', 'http://loinc.org|2085-9',
-                    'http://loinc.org|2089-1', 'http://loinc.org|55284-4']
-            }
-          }
-        });
 
+        var obv = smart.patient.api.fetchAll({ type: 'Observation' });
         var conditions = smart.patient.api.fetchAll({ type: 'Condition' });
         var procedures = smart.patient.api.fetchAll({ type: 'Procedure' });
         var encounters = smart.patient.api.fetchAll({ type: 'Encounter' });
         var medications = smart.patient.api.fetchAll({ type: 'MedicationRequest' });
         var careplans = smart.patient.api.fetchAll({ type: 'CarePlan' });
+        var devices = smart.patient.api.fetchAll({ type: 'Device' });
         var allergies = smart.patient.api.fetchAll({ type: 'AllergyIntolerance' });
 
-        $.when(pt, obv, conditions, procedures, encounters, medications, careplans, allergies).fail(onError);
+        $.when(pt, obv, conditions, procedures, encounters, medications, careplans, devices, allergies).fail(onError);
 
-        $.when(pt, obv, conditions, procedures, encounters, medications, careplans, allergies).done(function(patient, obv, conditions, procedures, encounters, medications, careplans, allergies) {
-          // ✅ 调试输出
-          console.log("✅ Patient:", patient);
-          console.log("✅ Observations:", obv);
-          console.log("✅ Conditions:", conditions);
-          console.log("✅ Procedures:", procedures);
-          console.log("✅ Encounters:", encounters);
-          console.log("✅ Medications:", medications);
-          console.log("✅ CarePlans:", careplans);
-          console.log("✅ Allergies:", allergies);
-
-          // 👇 以下为可视化所需基础字段处理（保留原逻辑）
+        $.when(pt, obv, conditions, procedures, encounters, medications, careplans, devices, allergies).done(function(patient, obv, conditions, procedures, encounters, medications, careplans, devices, allergies) {
           var byCodes = smart.byCodes(obv, 'code');
-          var gender = patient.gender;
-          var fname = patient.name?.[0]?.given?.join(' ') || '';
-          var lname = patient.name?.[0]?.family || '';
+
+          var gender = patient.gender || '';
+          var fname = (patient.name && patient.name[0] && patient.name[0].given) ? patient.name[0].given.join(' ') : '';
+          var lname = (patient.name && patient.name[0] && patient.name[0].family) ? patient.name[0].family : '';
+          var birthdate = patient.birthDate || '';
+
           var height = byCodes('8302-2');
-          var systolicbp = getBloodPressureValue(byCodes('55284-4'),'8480-6');
-          var diastolicbp = getBloodPressureValue(byCodes('55284-4'),'8462-4');
+          var systolicbp = getBloodPressureValue(byCodes('55284-4'), '8480-6');
+          var diastolicbp = getBloodPressureValue(byCodes('55284-4'), '8462-4');
           var hdl = byCodes('2085-9');
           var ldl = byCodes('2089-1');
 
           var p = defaultPatient();
-          p.birthdate = patient.birthDate;
+          p.birthdate = birthdate;
           p.gender = gender;
           p.fname = fname;
           p.lname = lname;
@@ -64,6 +47,24 @@
           p.diastolicbp = diastolicbp;
           p.hdl = getQuantityValueAndUnit(hdl[0]);
           p.ldl = getQuantityValueAndUnit(ldl[0]);
+
+          // Debug: log full resources
+          console.log("Conditions:", conditions);
+          console.log("Procedures:", procedures);
+          console.log("Encounters:", encounters);
+          console.log("Medications:", medications);
+          console.log("CarePlans:", careplans);
+          console.log("Devices:", devices);
+          console.log("Allergies:", allergies);
+
+          // Append data to HTML lists
+          appendToList('#condition-list', conditions.map(c => c.code?.text || 'No Description'));
+          appendToList('#procedure-list', procedures.map(p => p.code?.text || 'No Description'));
+          appendToList('#encounter-list', encounters.map(e => e.type?.[0]?.text || 'No Description'));
+          appendToList('#medication-list', medications.map(m => m.medicationCodeableConcept?.text || 'No Description'));
+          appendToList('#careplan-list', careplans.map(cp => cp.description || 'No Description'));
+          appendToList('#device-list', devices.map(d => d.type?.text || 'No Description'));
+          appendToList('#allergy-list', allergies.map(a => a.code?.text || 'No Description'));
 
           ret.resolve(p);
         });
@@ -76,26 +77,28 @@
     return ret.promise();
   };
 
-  function defaultPatient(){
+  function defaultPatient() {
     return {
-      fname: {value: ''},
-      lname: {value: ''},
-      gender: {value: ''},
-      birthdate: {value: ''},
-      height: {value: ''},
-      systolicbp: {value: ''},
-      diastolicbp: {value: ''},
-      ldl: {value: ''},
-      hdl: {value: ''},
+      fname: { value: '' },
+      lname: { value: '' },
+      gender: { value: '' },
+      birthdate: { value: '' },
+      height: { value: '' },
+      systolicbp: { value: '' },
+      diastolicbp: { value: '' },
+      ldl: { value: '' },
+      hdl: { value: '' },
     };
   }
 
   function getBloodPressureValue(BPObservations, typeOfPressure) {
     var formattedBPObservations = [];
-    BPObservations.forEach(function(observation){
-      var BP = observation.component?.find(component =>
-        component.code?.coding?.find(coding => coding.code == typeOfPressure)
-      );
+    BPObservations.forEach(function(observation) {
+      var BP = observation.component?.find(function(component) {
+        return component.code.coding?.find(function(coding) {
+          return coding.code === typeOfPressure;
+        });
+      });
       if (BP) {
         observation.valueQuantity = BP.valueQuantity;
         formattedBPObservations.push(observation);
@@ -105,10 +108,20 @@
   }
 
   function getQuantityValueAndUnit(ob) {
-    if (ob?.valueQuantity?.value && ob?.valueQuantity?.unit) {
+    if (ob?.valueQuantity?.value !== undefined && ob?.valueQuantity?.unit !== undefined) {
       return ob.valueQuantity.value + ' ' + ob.valueQuantity.unit;
     }
     return undefined;
+  }
+
+  function appendToList(selector, items) {
+    const $el = $(selector);
+    if ($el.length === 0) return;
+    if (items.length === 0) {
+      $el.append('<li>No data available</li>');
+    } else {
+      items.forEach(i => $el.append(`<li>${i}</li>`));
+    }
   }
 
   window.drawVisualization = function(p) {
