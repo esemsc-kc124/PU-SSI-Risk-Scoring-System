@@ -16,7 +16,17 @@
         var conditions = smart.patient.api.fetchAll({ type: 'Condition' });
         var procedures = smart.patient.api.fetchAll({ type: 'Procedure' });
         var encounters = smart.patient.api.fetchAll({ type: 'Encounter' });
-        var medications = smart.patient.api.fetchAll({ type: 'MedicationRequest' });
+        var medications = smart.patient.api.fetchAll({ type: 'MedicationRequest' })
+          .catch(e => {
+            console.warn("MedicationRequest failed, fallback to MedicationStatement", e);
+            return smart.patient.api.fetchAll({ type: 'MedicationStatement' });
+          })
+          .catch(e2 => {
+            console.error("Both MedicationRequest and MedicationStatement failed", e2);
+            return []; // fallback to empty array
+          });
+
+
         var careplans = smart.patient.api.fetchAll({ type: 'CarePlan' });
         var devices = smart.patient.api.fetchAll({ type: 'Device' });
         var allergies = smart.patient.api.fetchAll({ type: 'AllergyIntolerance' });

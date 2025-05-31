@@ -37,10 +37,22 @@
         padding: 10px 20px;
         width: 60%;
         box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        max-height: 160px;
+        overflow: hidden;
+      }
+      ul.expanded {
+        max-height: none;
       }
       ul li {
         padding: 5px 0;
         border-bottom: 1px solid #eee;
+      }
+      .see-more {
+        display: inline-block;
+        margin-top: 10px;
+        cursor: pointer;
+        color: #007BFF;
+        font-size: 14px;
       }
     </style>
   </head>
@@ -72,13 +84,13 @@
         <tr><th>HDL:</th><td id='hdl'></td></tr>
       </table>
 
-      <h3>Conditions</h3><ul id="condition-list"></ul>
-      <h3>Procedures</h3><ul id="procedure-list"></ul>
-      <h3>Encounters</h3><ul id="encounter-list"></ul>
-      <h3>Medications</h3><ul id="medication-list"></ul>
-      <h3>Care Plans</h3><ul id="careplan-list"></ul>
-      <h3>Devices</h3><ul id="device-list"></ul>
-      <h3>Allergies</h3><ul id="allergy-list"></ul>
+      <h3>Conditions</h3><ul id="condition-list"></ul><div class="see-more" data-target="condition-list">See more</div>
+      <h3>Procedures</h3><ul id="procedure-list"></ul><div class="see-more" data-target="procedure-list">See more</div>
+      <h3>Encounters</h3><ul id="encounter-list"></ul><div class="see-more" data-target="encounter-list">See more</div>
+      <h3>Medications</h3><ul id="medication-list"></ul><div class="see-more" data-target="medication-list">See more</div>
+      <h3>Care Plans</h3><ul id="careplan-list"></ul><div class="see-more" data-target="careplan-list">See more</div>
+      <h3>Devices</h3><ul id="device-list"></ul><div class="see-more" data-target="device-list">See more</div>
+      <h3>Allergies</h3><ul id="allergy-list"></ul><div class="see-more" data-target="allergy-list">See more</div>
 
       <!-- Prediction Button -->
       <button id="predict-btn">Run Prediction</button>
@@ -110,15 +122,16 @@
 
       $(document).on('click', '#predict-btn', function() {
         if (!globalPatientData) return alert("No patient data loaded");
-
-        // Send data to backend or local model (this example: print JSON)
         const payload = JSON.stringify(globalPatientData, null, 2);
         console.log("Prediction input:", payload);
-
-        // TODO: Replace with real POST to backend if needed
-        // $.post('/predict', globalPatientData).done(result => $('#prediction-result').text(result));
-
         $('#prediction-result').text("[Mock] Risk Score: 0.78\n\n" + payload);
+      });
+
+      $(document).on('click', '.see-more', function() {
+        const targetId = $(this).data('target');
+        $('#' + targetId).toggleClass('expanded');
+        const isExpanded = $('#' + targetId).hasClass('expanded');
+        $(this).text(isExpanded ? 'See less' : 'See more');
       });
     </script>
   </body>
