@@ -96,7 +96,8 @@
           appendToList('#procedure-list', procedures.map(p => p.code?.text || 'No Description'));
           appendToList('#encounter-list', encounters.map(e => e.type?.[0]?.text || 'No Description'));
           //appendToList('#medication-list', medications.map(m => m.medicationCodeableConcept?.text || 'No Description'));
-          appendToList('#careplan-list', careplans.map(cp => cp.description || 'No Description'));
+          // appendToList('#careplan-list', careplans.map(cp => cp.description || 'No Description'));
+          appendToList('#careplan-list', careplans.map((cp, i) => cp.description || `No Description (Item ${i + 1})`));
           appendToList('#device-list', devices.map(d => d.type?.text || 'No Description'));
           appendToList('#allergy-list', allergies.map(a => a.code?.text || 'No Description'));
 
@@ -158,6 +159,31 @@
   //     }
   //   }
   // }
+  // function appendToList(selector, items, limit = 5) {
+  //   const $el = $(selector);
+  //   $el.empty();
+
+  //   if (items.length === 0) {
+  //     $el.append('<li>No data available</li>');
+  //     return;
+  //   }
+
+  //   const limitedItems = items.slice(0, limit);
+  //   const hiddenItems = items.slice(limit);
+
+  //   // Show first `limit` items
+  //   limitedItems.forEach(i => $el.append(`<li>${i}</li>`));
+
+  //   if (hiddenItems.length > 0) {
+  //     const moreId = selector.replace('#', '') + '-more';
+  //     $el.append(`<li id="${moreId}" style="cursor:pointer; color:blue;">See more...</li>`);
+
+  //     $(`#${moreId}`).on('click', function () {
+  //       hiddenItems.forEach(i => $el.append(`<li>${i}</li>`));
+  //       $(this).remove(); // Remove "See more..." link
+  //     });
+  //   }
+  // }
   function appendToList(selector, items, limit = 5) {
     const $el = $(selector);
     $el.empty();
@@ -167,22 +193,26 @@
       return;
     }
 
-    const limitedItems = items.slice(0, limit);
-    const hiddenItems = items.slice(limit);
+    let shownCount = 0;
 
-    // Show first `limit` items
-    limitedItems.forEach(i => $el.append(`<li>${i}</li>`));
+    function renderNextBatch() {
+      const nextBatch = items.slice(shownCount, shownCount + limit);
+      nextBatch.forEach(i => $el.append(`<li>${i}</li>`));
+      shownCount += nextBatch.length;
 
-    if (hiddenItems.length > 0) {
-      const moreId = selector.replace('#', '') + '-more';
-      $el.append(`<li id="${moreId}" style="cursor:pointer; color:blue;">See more...</li>`);
+      // Remove old See More if exists
+      $el.find('.see-more-item').remove();
 
-      $(`#${moreId}`).on('click', function () {
-        hiddenItems.forEach(i => $el.append(`<li>${i}</li>`));
-        $(this).remove(); // Remove "See more..." link
-      });
+      if (shownCount < items.length) {
+        const seeMoreItem = $(`<li class="see-more-item" style="cursor:pointer; color:blue;">See more...</li>`);
+        seeMoreItem.on('click', renderNextBatch);
+        $el.append(seeMoreItem);
+      }
     }
+
+    renderNextBatch();
   }
+
 
 
   window.drawVisualization = function(p) {
