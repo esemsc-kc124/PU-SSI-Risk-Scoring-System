@@ -13,7 +13,6 @@
       var patient = smart.patient;
       var pt = patient.read();
 
-      // Safe fetch wrapper: returns empty array on error
       function safeFetch(resourceType) {
         var deferred = $.Deferred();
         smart.patient.api.fetchAll({ type: resourceType })
@@ -24,26 +23,6 @@
           });
         return deferred.promise();
       }
-
-      // // Handle MedicationRequest fallback to MedicationStatement
-      // var medications = $.Deferred();
-      // smart.patient.api.fetchAll({ type: 'MedicationRequest' })
-      //   .done(data => medications.resolve(data))
-      //   .fail(err1 => {
-      //     console.warn("MedicationRequest failed, trying MedicationStatement", err1);
-      //     smart.patient.api.fetchAll({ type: 'MedicationStatement' })
-      //       .done(data2 => medications.resolve(data2))
-      //       .fail(err2 => {
-      //         console.warn("MedicationStatement failed, trying MedicationOrder", err2);
-      //         smart.patient.api.fetchAll({ type: 'MedicationOrder' })
-      //           .done(data3 => medications.resolve(data3))
-      //           .fail(err3 => {
-      //             console.warn("All medication fetch attempts failed", err3);
-      //             medications.resolve([]);
-      //           });
-      //       });
-      //   });
-
 
       var obv = safeFetch('Observation');
       var conditions = safeFetch('Condition');
@@ -58,13 +37,11 @@
         .done(function(patient, obv, conditions, procedures, encounters, careplans, devices, allergies) {
           var byCodes = smart.byCodes(obv, 'code');
 
-          // Extract patient demographics
           var gender = patient.gender || '';
-          var fname = (patient.name && patient.name[0] && patient.name[0].given) ? patient.name[0].given.join(' ') : '';
-          var lname = (patient.name && patient.name[0] && patient.name[0].family) ? patient.name[0].family : '';
+          var fname = (patient.name && patient.name[0]?.given) ? patient.name[0].given.join(' ') : '';
+          var lname = (patient.name && patient.name[0]?.family) ? patient.name[0].family : '';
           var birthdate = patient.birthDate || '';
 
-          // Extract clinical observations
           var height = byCodes('8302-2');
           var systolicbp = getBloodPressureValue(byCodes('55284-4'), '8480-6');
           var diastolicbp = getBloodPressureValue(byCodes('55284-4'), '8462-4');
@@ -82,22 +59,10 @@
           p.hdl = getQuantityValueAndUnit(hdl[0]);
           p.ldl = getQuantityValueAndUnit(ldl[0]);
 
-          // Debug logging
-          console.log("Conditions:", conditions);
-          console.log("Procedures:", procedures);
-          console.log("Encounters:", encounters);
-          //console.log("Medications:", medications);
-          console.log("CarePlans:", careplans);
-          console.log("Devices:", devices);
-          console.log("Allergies:", allergies);
-
-          // Append to UI lists
           appendToList('#condition-list', conditions.map(c => c.code?.text || 'No Description'));
           appendToList('#procedure-list', procedures.map(p => p.code?.text || 'No Description'));
           appendToList('#encounter-list', encounters.map(e => e.type?.[0]?.text || 'No Description'));
-          //appendToList('#medication-list', medications.map(m => m.medicationCodeableConcept?.text || 'No Description'));
-          // appendToList('#careplan-list', careplans.map(cp => cp.description || 'No Description'));
-          appendToList('#careplan-list', careplans.map((cp, i) => cp.description || `No Description (Item ${i + 1})`));
+          appendToList('#careplan-list', careplans.map((cp, i) => cp.description || `No Description (${i + 1})`));
           appendToList('#device-list', devices.map(d => d.type?.text || 'No Description'));
           appendToList('#allergy-list', allergies.map(a => a.code?.text || 'No Description'));
 
@@ -124,19 +89,15 @@
   }
 
   function getBloodPressureValue(BPObservations, typeOfPressure) {
-    var formattedBPObservations = [];
-    BPObservations.forEach(function(observation) {
-      var BP = observation.component?.find(function(component) {
-        return component.code.coding?.find(function(coding) {
-          return coding.code === typeOfPressure;
-        });
-      });
-      if (BP) {
-        observation.valueQuantity = BP.valueQuantity;
-        formattedBPObservations.push(observation);
+    var formatted = [];
+    BPObservations.forEach(function(obs) {
+      var comp = obs.component?.find(c => c.code.coding?.some(coding => coding.code === typeOfPressure));
+      if (comp) {
+        obs.valueQuantity = comp.valueQuantity;
+        formatted.push(obs);
       }
     });
-    return getQuantityValueAndUnit(formattedBPObservations[0]);
+    return getQuantityValueAndUnit(formatted[0]);
   }
 
   function getQuantityValueAndUnit(ob) {
@@ -146,81 +107,17 @@
     return undefined;
   }
 
-  // function appendToList(selector, items) {
-  //   const $el = $(selector);
-  //   if ($el.length === 0) return;
-  //   if (items.length === 0) {
-  //     $el.append('<li>No data available</li>');
-  //   } else {
-  //     const maxItems = 5;
-  //     items.slice(0, maxItems).forEach(i => $el.append(`<li>${i}</li>`));
-  //     if (items.length > maxItems) {
-  //       $el.append(`<li><em>See more...</em></li>`);
-  //     }
-  //   }
-  // }
-  // function appendToList(selector, items, limit = 5) {
-  //   const $el = $(selector);
-  //   $el.empty();
-
-  //   if (items.length === 0) {
-  //     $el.append('<li>No data available</li>');
-  //     return;
-  //   }
-
-  //   const limitedItems = items.slice(0, limit);
-  //   const hiddenItems = items.slice(limit);
-
-  //   // Show first `limit` items
-  //   limitedItems.forEach(i => $el.append(`<li>${i}</li>`));
-
-  //   if (hiddenItems.length > 0) {
-  //     const moreId = selector.replace('#', '') + '-more';
-  //     $el.append(`<li id="${moreId}" style="cursor:pointer; color:blue;">See more...</li>`);
-
-  //     $(`#${moreId}`).on('click', function () {
-  //       hiddenItems.forEach(i => $el.append(`<li>${i}</li>`));
-  //       $(this).remove(); // Remove "See more..." link
-  //     });
-  //   }
-  // }
-  function appendToList(selector, items, limit = 5) {
-    const $ul = $(selector);
-    $ul.empty(); // Clear old content
-    const toggleId = selector.replace('#', '') + '-toggle';
+  function appendToList(selector, items) {
+    const $el = $(selector);
+    $el.empty();
 
     if (items.length === 0) {
-      $ul.append('<li>No data available</li>');
+      $el.append('<li>No data available</li>');
       return;
     }
 
-    // Add first `limit` items
-    items.slice(0, limit).forEach(i => $ul.append(`<li>${i}</li>`));
-
-    // If there's more, add hidden items in <li style="display:none">
-    if (items.length > limit) {
-      items.slice(limit).forEach(i => $ul.append(`<li class="hidden-item" style="display:none">${i}</li>`));
-
-      $ul.append(`<li id="${toggleId}" style="cursor:pointer; color:blue;">Show more...</li>`);
-
-      // Unbind and rebind for safety
-      $(document).off('click', `#${toggleId}`);
-      $(document).on('click', `#${toggleId}`, function () {
-        const $hiddenItems = $ul.find('.hidden-item');
-        const isExpanded = $hiddenItems.is(':visible');
-
-        if (isExpanded) {
-          $hiddenItems.hide();
-          $(this).text('Show more...');
-        } else {
-          $hiddenItems.show();
-          $(this).text('Show less');
-        }
-      });
-    }
+    items.forEach(i => $el.append(`<li>${i}</li>`));
   }
-
-
 
   window.drawVisualization = function(p) {
     $('#holder').show();

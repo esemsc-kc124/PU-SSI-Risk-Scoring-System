@@ -1,137 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <link rel='stylesheet' type='text/css' href='./src/css/example-smart-app.css'>
-    <title>PU-SSI-Risk-Scoring-System</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 40px;
-        background-color: #f9f9f9;
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>PU-SSI Risk Scoring System</title>
+  <link rel='stylesheet' type='text/css' href='./src/css/example-smart-app.css'>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f9f9f9;
+    }
+    h2 {
+      margin-top: 40px;
+      border-bottom: 2px solid #ddd;
+      padding-bottom: 5px;
+    }
+    table {
+      width: 60%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      margin-bottom: 30px;
+      background: #fff;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    th, td {
+      text-align: left;
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    th {
+      background-color: #f0f0f0;
+    }
+    ul {
+      background: #fff;
+      padding: 10px 20px;
+      width: 60%;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    ul.collapsible {
+      max-height: 160px;
+      overflow: hidden;
+    }
+    ul.expanded {
+      max-height: none;
+      overflow: visible;
+    }
+    ul li {
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .see-toggle {
+      margin-top: -10px;
+      margin-bottom: 30px;
+      width: 60%;
+      cursor: pointer;
+      color: #007BFF;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id='errors'></div>
+  <div id="loading" class="spinner">
+    <div class="bounce1"></div>
+    <div class="bounce2"></div>
+    <div class="bounce3"></div>
+  </div>
+
+  <div id='holder' style="display: none">
+    <h2>PU-SSI Risk Scoring System</h2>
+
+    <h3>Patient Resource</h3>
+    <table>
+      <tr><th>First Name:</th><td id='fname'></td></tr>
+      <tr><th>Last Name:</th><td id='lname'></td></tr>
+      <tr><th>Gender:</th><td id='gender'></td></tr>
+      <tr><th>Date of Birth:</th><td id='birthdate'></td></tr>
+    </table>
+
+    <h3>Observation Resource</h3>
+    <table>
+      <tr><th>Height:</th><td id='height'></td></tr>
+      <tr><th>Systolic Blood Pressure:</th><td id='systolicbp'></td></tr>
+      <tr><th>Diastolic Blood Pressure:</th><td id='diastolicbp'></td></tr>
+      <tr><th>LDL:</th><td id='ldl'></td></tr>
+      <tr><th>HDL:</th><td id='hdl'></td></tr>
+    </table>
+
+    <h3>Conditions</h3><ul id="condition-list" class="collapsible"></ul><div class="see-toggle" data-target="condition-list">Show more...</div>
+    <h3>Procedures</h3><ul id="procedure-list" class="collapsible"></ul><div class="see-toggle" data-target="procedure-list">Show more...</div>
+    <h3>Encounters</h3><ul id="encounter-list" class="collapsible"></ul><div class="see-toggle" data-target="encounter-list">Show more...</div>
+    <h3>Care Plans</h3><ul id="careplan-list" class="collapsible"></ul><div class="see-toggle" data-target="careplan-list">Show more...</div>
+    <h3>Devices</h3><ul id="device-list" class="collapsible"></ul><div class="see-toggle" data-target="device-list">Show more...</div>
+    <h3>Allergies</h3><ul id="allergy-list" class="collapsible"></ul><div class="see-toggle" data-target="allergy-list">Show more...</div>
+
+    <button id="predict-btn">Run Prediction</button>
+    <pre id="prediction-result"></pre>
+  </div>
+
+  <script src='./lib/js/fhir-client-v0.1.12.js'></script>
+  <script src='./lib/js/fhir-client-cerner-additions-1.0.0.js'></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <script src='./src/js/example-smart-app.js'></script>
+
+  <script>
+    let globalPatientData = null;
+
+    extractData().then(
+      function(p) {
+        globalPatientData = p;
+        drawVisualization(p);
+      },
+      function() {
+        $('#loading').hide();
+        $('#errors').html('<p> Failed to call FHIR Service </p>');
       }
-      h2 {
-        margin-top: 40px;
-        border-bottom: 2px solid #ddd;
-        padding-bottom: 5px;
+    );
+
+    $(document).on('click', '#predict-btn', function() {
+      if (!globalPatientData) return alert("No patient data loaded");
+      const payload = JSON.stringify(globalPatientData, null, 2);
+      console.log("Prediction input:", payload);
+      $('#prediction-result').text("[Mock] Risk Score: 0.78\n\n" + payload);
+    });
+
+    $(document).on('click', '.see-toggle', function () {
+      const targetId = $(this).data('target');
+      const $list = $('#' + targetId);
+      const isExpanded = $list.hasClass('expanded');
+
+      if (isExpanded) {
+        $list.removeClass('expanded').addClass('collapsible');
+        $(this).text('Show more...');
+      } else {
+        $list.removeClass('collapsible').addClass('expanded');
+        $(this).text('Show less');
       }
-      table {
-        width: 60%;
-        border-collapse: collapse;
-        margin-top: 10px;
-        margin-bottom: 30px;
-        background: #fff;
-        box-shadow: 0 0 5px rgba(0,0,0,0.1);
-      }
-      th, td {
-        text-align: left;
-        padding: 10px;
-        border-bottom: 1px solid #eee;
-      }
-      th {
-        background-color: #f0f0f0;
-      }
-      ul {
-        background: #fff;
-        padding: 10px 20px;
-        width: 60%;
-        box-shadow: 0 0 5px rgba(0,0,0,0.1);
-        max-height: 160px;
-        overflow: hidden;
-      }
-      ul.collapsible {
-        max-height: 160px;
-        overflow: hidden;
-      }
-      ul.expanded {
-        max-height: none;
-        overflow: visible;
-      }
-
-      ul li {
-        padding: 5px 0;
-        border-bottom: 1px solid #eee;
-      }
-    </style>
-  </head>
-  <body>
-    <div id='errors'></div>
-    <div id="loading" class="spinner">
-      <div class="bounce1"></div>
-      <div class="bounce2"></div>
-      <div class="bounce3"></div>
-    </div>
-
-    <div id='holder' style="display: none">
-      <h2>PU-SSI Risk Scoring System</h2>
-
-      <h3>Patient Resource</h3>
-      <table>
-        <tr><th>First Name:</th><td id='fname'></td></tr>
-        <tr><th>Last Name:</th><td id='lname'></td></tr>
-        <tr><th>Gender:</th><td id='gender'></td></tr>
-        <tr><th>Date of Birth:</th><td id='birthdate'></td></tr>
-      </table>
-
-      <h3>Observation Resource</h3>
-      <table>
-        <tr><th>Height:</th><td id='height'></td></tr>
-        <tr><th>Systolic Blood Pressure:</th><td id='systolicbp'></td></tr>
-        <tr><th>Diastolic Blood Pressure:</th><td id='diastolicbp'></td></tr>
-        <tr><th>LDL:</th><td id='ldl'></td></tr>
-        <tr><th>HDL:</th><td id='hdl'></td></tr>
-      </table>
-
-      <h3>Conditions</h3><ul id="condition-list" class="collapsible"></ul>
-      <h3>Procedures</h3><ul id="procedure-list" class="collapsible"></ul>
-      <h3>Encounters</h3><ul id="encounter-list" class="collapsible"></ul>
-      <!-- <h3>Medications</h3><ul id="medication-list"></ul><div class="see-more" data-target="medication-list">See more</div> -->
-      <h3>Care Plans</h3><ul id="careplan-list" class="collapsible"></ul>
-      <h3>Devices</h3><ul id="device-list" class="collapsible"></ul>
-      <h3>Allergies</h3><ul id="allergy-list" class="collapsible"></ul>
-
-      <!-- Prediction Button -->
-      <button id="predict-btn">Run Prediction</button>
-      <pre id="prediction-result"></pre>
-    </div>
-
-    <!-- FHIR + jQuery Libraries -->
-    <script src='./lib/js/fhir-client-v0.1.12.js'></script>
-    <script src='./lib/js/fhir-client-cerner-additions-1.0.0.js'></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-
-    <!-- Load App Logic -->
-    <script src='./src/js/example-smart-app.js'></script>
-
-    <!-- Load and draw data -->
-    <script>
-      let globalPatientData = null;
-
-      extractData().then(
-        function(p) {
-          globalPatientData = p;
-          drawVisualization(p);
-        },
-        function() {
-          $('#loading').hide();
-          $('#errors').html('<p> Failed to call FHIR Service </p>');
-        }
-      );
-
-      $(document).on('click', '#predict-btn', function() {
-        if (!globalPatientData) return alert("No patient data loaded");
-        const payload = JSON.stringify(globalPatientData, null, 2);
-        console.log("Prediction input:", payload);
-        $('#prediction-result').text("[Mock] Risk Score: 0.78\n\n" + payload);
-      });
-
-      // $(document).on('click', '.see-more', function() {
-      //   const targetId = $(this).data('target');
-      //   $('#' + targetId).toggleClass('expanded');
-      //   const isExpanded = $('#' + targetId).hasClass('expanded');
-      //   $(this).text(isExpanded ? 'See less' : 'See more');
-      // });
-    </script>
-  </body>
+    });
+  </script>
+</body>
 </html>
