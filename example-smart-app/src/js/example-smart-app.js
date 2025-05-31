@@ -38,8 +38,8 @@
           var byCodes = smart.byCodes(obv, 'code');
 
           var gender = patient.gender || '';
-          var fname = (patient.name && patient.name[0]?.given) ? patient.name[0].given.join(' ') : '';
-          var lname = (patient.name && patient.name[0]?.family) ? patient.name[0].family : '';
+          var fname = patient.name?.[0]?.given?.join(' ') || '';
+          var lname = patient.name?.[0]?.family || '';
           var birthdate = patient.birthDate || '';
 
           var height = byCodes('8302-2');
@@ -48,21 +48,18 @@
           var hdl = byCodes('2085-9');
           var ldl = byCodes('2089-1');
 
-          var p = defaultPatient();
-          p.birthdate = birthdate;
-          p.gender = gender;
-          p.fname = fname;
-          p.lname = lname;
-          p.height = getQuantityValueAndUnit(height[0]);
-          p.systolicbp = systolicbp;
-          p.diastolicbp = diastolicbp;
-          p.hdl = getQuantityValueAndUnit(hdl[0]);
-          p.ldl = getQuantityValueAndUnit(ldl[0]);
+          var p = {
+            fname, lname, gender, birthdate,
+            height: getQuantityValueAndUnit(height[0]),
+            systolicbp, diastolicbp,
+            hdl: getQuantityValueAndUnit(hdl[0]),
+            ldl: getQuantityValueAndUnit(ldl[0])
+          };
 
           appendToList('#condition-list', conditions.map(c => c.code?.text || 'No Description'));
           appendToList('#procedure-list', procedures.map(p => p.code?.text || 'No Description'));
           appendToList('#encounter-list', encounters.map(e => e.type?.[0]?.text || 'No Description'));
-          appendToList('#careplan-list', careplans.map((cp, i) => cp.description || `No Description (${i + 1})`));
+          appendToList('#careplan-list', careplans.map(cp => cp.description || 'No Description'));
           appendToList('#device-list', devices.map(d => d.type?.text || 'No Description'));
           appendToList('#allergy-list', allergies.map(a => a.code?.text || 'No Description'));
 
@@ -74,62 +71,39 @@
     return ret.promise();
   };
 
-  function defaultPatient() {
-    return {
-      fname: { value: '' },
-      lname: { value: '' },
-      gender: { value: '' },
-      birthdate: { value: '' },
-      height: { value: '' },
-      systolicbp: { value: '' },
-      diastolicbp: { value: '' },
-      ldl: { value: '' },
-      hdl: { value: '' },
-    };
-  }
-
-  function getBloodPressureValue(BPObservations, typeOfPressure) {
-    var formatted = [];
-    BPObservations.forEach(function(obs) {
-      var comp = obs.component?.find(c => c.code.coding?.some(coding => coding.code === typeOfPressure));
-      if (comp) {
-        obs.valueQuantity = comp.valueQuantity;
-        formatted.push(obs);
-      }
-    });
-    return getQuantityValueAndUnit(formatted[0]);
+  function getBloodPressureValue(obsArray, code) {
+    let valObs = obsArray.find(o => o.component?.some(c => c.code?.coding?.some(cc => cc.code === code)));
+    let comp = valObs?.component?.find(c => c.code?.coding?.some(cc => cc.code === code));
+    return getQuantityValueAndUnit(comp);
   }
 
   function getQuantityValueAndUnit(ob) {
-    if (ob?.valueQuantity?.value !== undefined && ob?.valueQuantity?.unit !== undefined) {
-      return ob.valueQuantity.value + ' ' + ob.valueQuantity.unit;
-    }
-    return undefined;
+    return (ob?.valueQuantity?.value !== undefined && ob?.valueQuantity?.unit !== undefined)
+      ? ob.valueQuantity.value + ' ' + ob.valueQuantity.unit
+      : undefined;
   }
 
   function appendToList(selector, items) {
     const $el = $(selector);
     $el.empty();
-
     if (items.length === 0) {
       $el.append('<li>No data available</li>');
-      return;
+    } else {
+      items.forEach(i => $el.append(`<li>${i}</li>`));
     }
-
-    items.forEach(i => $el.append(`<li>${i}</li>`));
   }
 
   window.drawVisualization = function(p) {
     $('#holder').show();
     $('#loading').hide();
-    $('#fname').html(p.fname);
-    $('#lname').html(p.lname);
-    $('#gender').html(p.gender);
-    $('#birthdate').html(p.birthdate);
-    $('#height').html(p.height);
-    $('#systolicbp').html(p.systolicbp);
-    $('#diastolicbp').html(p.diastolicbp);
-    $('#ldl').html(p.ldl);
-    $('#hdl').html(p.hdl);
+    $('#fname').text(p.fname);
+    $('#lname').text(p.lname);
+    $('#gender').text(p.gender);
+    $('#birthdate').text(p.birthdate);
+    $('#height').text(p.height);
+    $('#systolicbp').text(p.systolicbp);
+    $('#diastolicbp').text(p.diastolicbp);
+    $('#ldl').text(p.ldl);
+    $('#hdl').text(p.hdl);
   };
 })(window);

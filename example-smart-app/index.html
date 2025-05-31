@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>PU-SSI Risk Scoring System</title>
-  <link rel='stylesheet' type='text/css' href='./src/css/example-smart-app.css'>
+  <title>PU-SSI-Risk-Scoring-System</title>
+  <link rel="stylesheet" href="./src/css/example-smart-app.css">
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -19,8 +19,7 @@
     table {
       width: 60%;
       border-collapse: collapse;
-      margin-top: 10px;
-      margin-bottom: 30px;
+      margin: 10px 0 30px;
       background: #fff;
       box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
@@ -50,13 +49,11 @@
       padding: 5px 0;
       border-bottom: 1px solid #eee;
     }
-    .see-toggle {
-      margin-top: -10px;
-      margin-bottom: 30px;
-      width: 60%;
+    .toggle-btn {
       cursor: pointer;
-      color: #007BFF;
+      color: blue;
       font-size: 14px;
+      margin: 5px 0 30px 20px;
     }
   </style>
 </head>
@@ -82,27 +79,27 @@
     <h3>Observation Resource</h3>
     <table>
       <tr><th>Height:</th><td id='height'></td></tr>
-      <tr><th>Systolic Blood Pressure:</th><td id='systolicbp'></td></tr>
-      <tr><th>Diastolic Blood Pressure:</th><td id='diastolicbp'></td></tr>
+      <tr><th>Systolic BP:</th><td id='systolicbp'></td></tr>
+      <tr><th>Diastolic BP:</th><td id='diastolicbp'></td></tr>
       <tr><th>LDL:</th><td id='ldl'></td></tr>
       <tr><th>HDL:</th><td id='hdl'></td></tr>
     </table>
 
-    <h3>Conditions</h3><ul id="condition-list" class="collapsible"></ul><div class="see-toggle" data-target="condition-list">Show more...</div>
-    <h3>Procedures</h3><ul id="procedure-list" class="collapsible"></ul><div class="see-toggle" data-target="procedure-list">Show more...</div>
-    <h3>Encounters</h3><ul id="encounter-list" class="collapsible"></ul><div class="see-toggle" data-target="encounter-list">Show more...</div>
-    <h3>Care Plans</h3><ul id="careplan-list" class="collapsible"></ul><div class="see-toggle" data-target="careplan-list">Show more...</div>
-    <h3>Devices</h3><ul id="device-list" class="collapsible"></ul><div class="see-toggle" data-target="device-list">Show more...</div>
-    <h3>Allergies</h3><ul id="allergy-list" class="collapsible"></ul><div class="see-toggle" data-target="allergy-list">Show more...</div>
+    <h3>Conditions</h3><ul id="condition-list" class="collapsible"></ul><div class="toggle-btn" data-target="condition-list">Show more...</div>
+    <h3>Procedures</h3><ul id="procedure-list" class="collapsible"></ul><div class="toggle-btn" data-target="procedure-list">Show more...</div>
+    <h3>Encounters</h3><ul id="encounter-list" class="collapsible"></ul><div class="toggle-btn" data-target="encounter-list">Show more...</div>
+    <h3>Care Plans</h3><ul id="careplan-list" class="collapsible"></ul><div class="toggle-btn" data-target="careplan-list">Show more...</div>
+    <h3>Devices</h3><ul id="device-list" class="collapsible"></ul><div class="toggle-btn" data-target="device-list">Show more...</div>
+    <h3>Allergies</h3><ul id="allergy-list" class="collapsible"></ul><div class="toggle-btn" data-target="allergy-list">Show more...</div>
 
     <button id="predict-btn">Run Prediction</button>
     <pre id="prediction-result"></pre>
   </div>
 
-  <script src='./lib/js/fhir-client-v0.1.12.js'></script>
-  <script src='./lib/js/fhir-client-cerner-additions-1.0.0.js'></script>
+  <script src="./lib/js/fhir-client-v0.1.12.js"></script>
+  <script src="./lib/js/fhir-client-cerner-additions-1.0.0.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-  <script src='./src/js/example-smart-app.js'></script>
+  <script src="./src/js/example-smart-app.js"></script>
 
   <script>
     let globalPatientData = null;
@@ -121,20 +118,18 @@
     $(document).on('click', '#predict-btn', function() {
       if (!globalPatientData) return alert("No patient data loaded");
       const payload = JSON.stringify(globalPatientData, null, 2);
-      console.log("Prediction input:", payload);
       $('#prediction-result').text("[Mock] Risk Score: 0.78\n\n" + payload);
     });
 
-    $(document).on('click', '.see-toggle', function () {
-      const targetId = $(this).data('target');
-      const $list = $('#' + targetId);
-      const isExpanded = $list.hasClass('expanded');
-
-      if (isExpanded) {
-        $list.removeClass('expanded').addClass('collapsible');
+    $(document).on('click', '.toggle-btn', function() {
+      const target = $(this).data('target');
+      const $ul = $('#' + target);
+      const expanded = $ul.hasClass('expanded');
+      if (expanded) {
+        $ul.removeClass('expanded').addClass('collapsible');
         $(this).text('Show more...');
       } else {
-        $list.removeClass('collapsible').addClass('expanded');
+        $ul.removeClass('collapsible').addClass('expanded');
         $(this).text('Show less');
       }
     });
