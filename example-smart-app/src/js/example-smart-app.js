@@ -8,38 +8,63 @@
     }
 
     function onReady(smart) {
-      if (smart.hasOwnProperty('patient')) {
-        var patient = smart.patient;
-        var pt = patient.read();
+      if (!smart.hasOwnProperty('patient')) return onError();
 
-        var obv = smart.patient.api.fetchAll({ type: 'Observation' });
-        var conditions = smart.patient.api.fetchAll({ type: 'Condition' });
-        var procedures = smart.patient.api.fetchAll({ type: 'Procedure' });
-        var encounters = smart.patient.api.fetchAll({ type: 'Encounter' });
-        var medications = smart.patient.api.fetchAll({ type: 'MedicationRequest' }).catch(e => {
-          console.warn("MedicationRequest failed, fallback to MedicationStatement", e);
-          return smart.patient.api.fetchAll({ type: 'MedicationStatement' }).catch(e2 => {
-            console.warn("Both MedicationRequest and MedicationStatement failed", e2);
-            return []; // fallback to empty array
+      var patient = smart.patient;
+      var pt = patient.read();
+
+      // Safe fetch wrapper: returns empty array on error
+      function safeFetch(resourceType) {
+        var deferred = $.Deferred();
+        smart.patient.api.fetchAll({ type: resourceType })
+          .done(data => deferred.resolve(data))
+          .fail(error => {
+            console.warn(`${resourceType} fetch failed`, error);
+            deferred.resolve([]);
           });
+        return deferred.promise();
+      }
+
+      // Handle MedicationRequest fallback to MedicationStatement
+      var medications = $.Deferred();
+      smart.patient.api.fetchAll({ type: 'MedicationRequest' })
+        .done(data => medications.resolve(data))
+        .fail(err1 => {
+          console.warn("MedicationRequest failed, trying MedicationStatement", err1);
+          smart.patient.api.fetchAll({ type: 'MedicationStatement' })
+            .done(data2 => medications.resolve(data2))
+            .fail(err2 => {
+              console.warn("MedicationStatement failed, trying MedicationOrder", err2);
+              smart.patient.api.fetchAll({ type: 'MedicationOrder' })
+                .done(data3 => medications.resolve(data3))
+                .fail(err3 => {
+                  console.warn("All medication fetch attempts failed", err3);
+                  medications.resolve([]);
+                });
+            });
         });
 
 
+      var obv = safeFetch('Observation');
+      var conditions = safeFetch('Condition');
+      var procedures = safeFetch('Procedure');
+      var encounters = safeFetch('Encounter');
+      var careplans = safeFetch('CarePlan');
+      var devices = safeFetch('Device');
+      var allergies = safeFetch('AllergyIntolerance');
 
-        var careplans = smart.patient.api.fetchAll({ type: 'CarePlan' });
-        var devices = smart.patient.api.fetchAll({ type: 'Device' });
-        var allergies = smart.patient.api.fetchAll({ type: 'AllergyIntolerance' });
-
-        $.when(pt, obv, conditions, procedures, encounters, medications, careplans, devices, allergies).fail(onError);
-
-        $.when(pt, obv, conditions, procedures, encounters, medications, careplans, devices, allergies).done(function(patient, obv, conditions, procedures, encounters, medications, careplans, devices, allergies) {
+      $.when(pt, obv, conditions, procedures, encounters, medications.promise(), careplans, devices, allergies)
+        .fail(onError)
+        .done(function(patient, obv, conditions, procedures, encounters, medications, careplans, devices, allergies) {
           var byCodes = smart.byCodes(obv, 'code');
 
+          // Extract patient demographics
           var gender = patient.gender || '';
           var fname = (patient.name && patient.name[0] && patient.name[0].given) ? patient.name[0].given.join(' ') : '';
           var lname = (patient.name && patient.name[0] && patient.name[0].family) ? patient.name[0].family : '';
           var birthdate = patient.birthDate || '';
 
+          // Extract clinical observations
           var height = byCodes('8302-2');
           var systolicbp = getBloodPressureValue(byCodes('55284-4'), '8480-6');
           var diastolicbp = getBloodPressureValue(byCodes('55284-4'), '8462-4');
@@ -57,7 +82,7 @@
           p.hdl = getQuantityValueAndUnit(hdl[0]);
           p.ldl = getQuantityValueAndUnit(ldl[0]);
 
-          // Debug: log full resources
+          // Debug logging
           console.log("Conditions:", conditions);
           console.log("Procedures:", procedures);
           console.log("Encounters:", encounters);
@@ -66,7 +91,7 @@
           console.log("Devices:", devices);
           console.log("Allergies:", allergies);
 
-          // Append data to HTML lists
+          // Append to UI lists
           appendToList('#condition-list', conditions.map(c => c.code?.text || 'No Description'));
           appendToList('#procedure-list', procedures.map(p => p.code?.text || 'No Description'));
           appendToList('#encounter-list', encounters.map(e => e.type?.[0]?.text || 'No Description'));
@@ -77,9 +102,6 @@
 
           ret.resolve(p);
         });
-      } else {
-        onError();
-      }
     }
 
     FHIR.oauth2.ready(onReady, onError);
@@ -129,7 +151,11 @@
     if (items.length === 0) {
       $el.append('<li>No data available</li>');
     } else {
-      items.forEach(i => $el.append(`<li>${i}</li>`));
+      const maxItems = 5;
+      items.slice(0, maxItems).forEach(i => $el.append(`<li>${i}</li>`));
+      if (items.length > maxItems) {
+        $el.append(`<li><em>See more...</em></li>`);
+      }
     }
   }
 
