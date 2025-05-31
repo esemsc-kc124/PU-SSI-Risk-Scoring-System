@@ -193,34 +193,30 @@
       return;
     }
 
-    const visibleItems = items.slice(0, limit);
-    const hiddenItems = items.slice(limit);
+    // Append all items
+    items.forEach(i => $el.append(`<li>${i}</li>`));
 
-    visibleItems.forEach(i => $el.append(`<li>${i}</li>`));
-
-    if (hiddenItems.length > 0) {
-      // Initially hidden full list
-      const hiddenHtml = hiddenItems.map(i => `<li class="hidden-item" style="display:none;">${i}</li>`).join('');
-      $el.append(hiddenHtml);
-
-      // Show more/less toggle
+    if (items.length > limit) {
       const toggleId = selector.replace('#', '') + '-toggle';
+      const $ul = $(selector);
+      $ul.addClass('collapsible'); // default: collapsed
       $el.append(`<li id="${toggleId}" style="cursor:pointer; color:blue;">Show more...</li>`);
 
-      $(document).off('click', `#${toggleId}`);
+      // Handle click toggle
+      $(document).off('click', `#${toggleId}`); // avoid multiple bindings
       $(document).on('click', `#${toggleId}`, function () {
-        const $hidden = $el.find('.hidden-item');
-        const isVisible = $hidden.first().is(':visible');
-        if (isVisible) {
-          $hidden.hide();
+        const isExpanded = $ul.hasClass('expanded');
+        if (isExpanded) {
+          $ul.removeClass('expanded').addClass('collapsible');
           $(this).text('Show more...');
         } else {
-          $hidden.show();
+          $ul.removeClass('collapsible').addClass('expanded');
           $(this).text('Show less');
         }
       });
     }
   }
+
 
   window.drawVisualization = function(p) {
     $('#holder').show();

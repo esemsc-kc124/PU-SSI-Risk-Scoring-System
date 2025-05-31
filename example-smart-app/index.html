@@ -40,9 +40,15 @@
         max-height: 160px;
         overflow: hidden;
       }
+      ul.collapsible {
+        max-height: 160px;
+        overflow: hidden;
+      }
       ul.expanded {
         max-height: none;
+        overflow: visible;
       }
+
       ul li {
         padding: 5px 0;
         border-bottom: 1px solid #eee;
@@ -84,13 +90,13 @@
         <tr><th>HDL:</th><td id='hdl'></td></tr>
       </table>
 
-      <h3>Conditions</h3><ul id="condition-list"></ul>
-      <h3>Procedures</h3><ul id="procedure-list"></ul>
-      <h3>Encounters</h3><ul id="encounter-list"></ul>
+      <h3>Conditions</h3><ul id="condition-list" class="collapsible"></ul>
+      <h3>Procedures</h3><ul id="procedure-list" class="collapsible"></ul>
+      <h3>Encounters</h3><ul id="encounter-list" class="collapsible"></ul>
       <!-- <h3>Medications</h3><ul id="medication-list"></ul><div class="see-more" data-target="medication-list">See more</div> -->
-      <h3>Care Plans</h3><ul id="careplan-list"></ul>
-      <h3>Devices</h3><ul id="device-list"></ul>
-      <h3>Allergies</h3><ul id="allergy-list"></ul>
+      <h3>Care Plans</h3><ul id="careplan-list" class="collapsible"></ul>
+      <h3>Devices</h3><ul id="device-list" class="collapsible"></ul>
+      <h3>Allergies</h3><ul id="allergy-list" class="collapsible"></ul>
 
       <!-- Prediction Button -->
       <button id="predict-btn">Run Prediction</button>
