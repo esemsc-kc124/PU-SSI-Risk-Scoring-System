@@ -53,9 +53,9 @@
       var devices = safeFetch('Device');
       var allergies = safeFetch('AllergyIntolerance');
 
-      $.when(pt, obv, conditions, procedures, encounters, medications.promise(), careplans, devices, allergies)
+      $.when(pt, obv, conditions, procedures, encounters, careplans, devices, allergies)
         .fail(onError)
-        .done(function(patient, obv, conditions, procedures, encounters, medications, careplans, devices, allergies) {
+        .done(function(patient, obv, conditions, procedures, encounters, careplans, devices, allergies) {
           var byCodes = smart.byCodes(obv, 'code');
 
           // Extract patient demographics
