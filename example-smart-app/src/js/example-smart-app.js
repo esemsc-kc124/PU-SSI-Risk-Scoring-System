@@ -209,10 +209,20 @@
 
     renderNextBatch(); // Show first batch
 
+    // if (items.length > batchSize) {
+    //   $el.append(`<li id="${moreId}" style="cursor:pointer; color:blue;">See more...</li>`);
+    //   $(`#${moreId}`).on('click', renderNextBatch);
+    // }
     if (items.length > batchSize) {
       $el.append(`<li id="${moreId}" style="cursor:pointer; color:blue;">See more...</li>`);
-      $(`#${moreId}`).on('click', renderNextBatch);
+
+      // Use event delegation to ensure correct binding
+      $el.off('click', `#${moreId}`); // Prevent duplicate binding
+      $el.on('click', `#${moreId}`, function () {
+        renderNextBatch();
+      });
     }
+
   }
 
   window.drawVisualization = function(p) {
