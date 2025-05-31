@@ -193,7 +193,6 @@
       return;
     }
 
-    // Display the first batch
     let currentIndex = 0;
     const moreId = selector.replace('#', '') + '-more';
 
@@ -203,27 +202,25 @@
       currentIndex += batchSize;
 
       if (currentIndex >= items.length) {
-        $(`#${moreId}`).remove(); // All items shown
+        $(`#${moreId}`).remove(); // Remove the "See more" if all shown
       }
     }
 
-    renderNextBatch(); // Show first batch
+    // Initial batch
+    renderNextBatch();
 
-    // if (items.length > batchSize) {
-    //   $el.append(`<li id="${moreId}" style="cursor:pointer; color:blue;">See more...</li>`);
-    //   $(`#${moreId}`).on('click', renderNextBatch);
-    // }
+    // Add "See more" button
     if (items.length > batchSize) {
-      $el.append(`<li id="${moreId}" style="cursor:pointer; color:blue;">See more...</li>`);
-
-      // Use event delegation to ensure correct binding
-      $el.off('click', `#${moreId}`); // Prevent duplicate binding
-      $el.on('click', `#${moreId}`, function () {
-        renderNextBatch();
-      });
+      $el.append(`<li id="${moreId}" style="cursor:pointer; color:blue; font-weight:bold;">• See more...</li>`);
     }
 
+    // Always unbind first to avoid duplicate events
+    $(document).off('click', `#${moreId}`);
+    $(document).on('click', `#${moreId}`, function () {
+      renderNextBatch();
+    });
   }
+
 
   window.drawVisualization = function(p) {
     $('#holder').show();
