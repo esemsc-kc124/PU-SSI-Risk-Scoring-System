@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta http-equiv='X-UA-Compatible' content='IE=edge' />
-    <meta http-equiv='Content-Type' content='text/html; charset=utf-8' />
-    <title>PU/SSI Risk Scoring System</title>
-
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <link rel='stylesheet' type='text/css' href='./src/css/example-smart-app.css'>
+    <title>PU-SSI-Risk-Scoring-System</title>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -52,10 +51,11 @@
       <div class="bounce2"></div>
       <div class="bounce3"></div>
     </div>
-    <div id='holder'>
-      <h2>PU/SSI Risk Scoring System</h2>
 
-      <h2>Patient Resource</h2>
+    <div id='holder' style="display: none">
+      <h2>PU-SSI Risk Scoring System</h2>
+
+      <h3>Patient Resource</h3>
       <table>
         <tr><th>First Name:</th><td id='fname'></td></tr>
         <tr><th>Last Name:</th><td id='lname'></td></tr>
@@ -63,7 +63,7 @@
         <tr><th>Date of Birth:</th><td id='birthdate'></td></tr>
       </table>
 
-      <h2>Observation Resource</h2>
+      <h3>Observation Resource</h3>
       <table>
         <tr><th>Height:</th><td id='height'></td></tr>
         <tr><th>Systolic Blood Pressure:</th><td id='systolicbp'></td></tr>
@@ -72,30 +72,34 @@
         <tr><th>HDL:</th><td id='hdl'></td></tr>
       </table>
 
-      <h2>Condition Resource</h2>
-      <ul id="conditions"></ul>
+      <h3>Conditions</h3><ul id="condition-list"></ul>
+      <h3>Procedures</h3><ul id="procedure-list"></ul>
+      <h3>Encounters</h3><ul id="encounter-list"></ul>
+      <h3>Medications</h3><ul id="medication-list"></ul>
+      <h3>Care Plans</h3><ul id="careplan-list"></ul>
+      <h3>Devices</h3><ul id="device-list"></ul>
+      <h3>Allergies</h3><ul id="allergy-list"></ul>
 
-      <h2>Procedure Resource</h2>
-      <ul id="procedures"></ul>
-
-      <h2>Encounter Resource</h2>
-      <ul id="encounters"></ul>
-
-      <h2>Medication Resource</h2>
-      <ul id="medications"></ul>
-
-      <h2>CarePlan Resource</h2>
-      <ul id="careplans"></ul>
+      <!-- Prediction Button -->
+      <button id="predict-btn">Run Prediction</button>
+      <pre id="prediction-result"></pre>
     </div>
 
-    <!-- Application-level javascript-->
-    <script src='./src/js/example-smart-app.js'></script>
+    <!-- FHIR + jQuery Libraries -->
     <script src='./lib/js/fhir-client-v0.1.12.js'></script>
     <script src='./lib/js/fhir-client-cerner-additions-1.0.0.js'></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+
+    <!-- Load App Logic -->
+    <script src='./src/js/example-smart-app.js'></script>
+
+    <!-- Load and draw data -->
     <script>
+      let globalPatientData = null;
+
       extractData().then(
         function(p) {
+          globalPatientData = p;
           drawVisualization(p);
         },
         function() {
@@ -103,6 +107,19 @@
           $('#errors').html('<p> Failed to call FHIR Service </p>');
         }
       );
+
+      $(document).on('click', '#predict-btn', function() {
+        if (!globalPatientData) return alert("No patient data loaded");
+
+        // Send data to backend or local model (this example: print JSON)
+        const payload = JSON.stringify(globalPatientData, null, 2);
+        console.log("Prediction input:", payload);
+
+        // TODO: Replace with real POST to backend if needed
+        // $.post('/predict', globalPatientData).done(result => $('#prediction-result').text(result));
+
+        $('#prediction-result').text("[Mock] Risk Score: 0.78\n\n" + payload);
+      });
     </script>
   </body>
 </html>
