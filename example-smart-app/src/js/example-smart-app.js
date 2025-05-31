@@ -25,24 +25,24 @@
         return deferred.promise();
       }
 
-      // Handle MedicationRequest fallback to MedicationStatement
-      var medications = $.Deferred();
-      smart.patient.api.fetchAll({ type: 'MedicationRequest' })
-        .done(data => medications.resolve(data))
-        .fail(err1 => {
-          console.warn("MedicationRequest failed, trying MedicationStatement", err1);
-          smart.patient.api.fetchAll({ type: 'MedicationStatement' })
-            .done(data2 => medications.resolve(data2))
-            .fail(err2 => {
-              console.warn("MedicationStatement failed, trying MedicationOrder", err2);
-              smart.patient.api.fetchAll({ type: 'MedicationOrder' })
-                .done(data3 => medications.resolve(data3))
-                .fail(err3 => {
-                  console.warn("All medication fetch attempts failed", err3);
-                  medications.resolve([]);
-                });
-            });
-        });
+      // // Handle MedicationRequest fallback to MedicationStatement
+      // var medications = $.Deferred();
+      // smart.patient.api.fetchAll({ type: 'MedicationRequest' })
+      //   .done(data => medications.resolve(data))
+      //   .fail(err1 => {
+      //     console.warn("MedicationRequest failed, trying MedicationStatement", err1);
+      //     smart.patient.api.fetchAll({ type: 'MedicationStatement' })
+      //       .done(data2 => medications.resolve(data2))
+      //       .fail(err2 => {
+      //         console.warn("MedicationStatement failed, trying MedicationOrder", err2);
+      //         smart.patient.api.fetchAll({ type: 'MedicationOrder' })
+      //           .done(data3 => medications.resolve(data3))
+      //           .fail(err3 => {
+      //             console.warn("All medication fetch attempts failed", err3);
+      //             medications.resolve([]);
+      //           });
+      //       });
+      //   });
 
 
       var obv = safeFetch('Observation');
@@ -86,7 +86,7 @@
           console.log("Conditions:", conditions);
           console.log("Procedures:", procedures);
           console.log("Encounters:", encounters);
-          console.log("Medications:", medications);
+          //console.log("Medications:", medications);
           console.log("CarePlans:", careplans);
           console.log("Devices:", devices);
           console.log("Allergies:", allergies);
@@ -95,7 +95,7 @@
           appendToList('#condition-list', conditions.map(c => c.code?.text || 'No Description'));
           appendToList('#procedure-list', procedures.map(p => p.code?.text || 'No Description'));
           appendToList('#encounter-list', encounters.map(e => e.type?.[0]?.text || 'No Description'));
-          appendToList('#medication-list', medications.map(m => m.medicationCodeableConcept?.text || 'No Description'));
+          //appendToList('#medication-list', medications.map(m => m.medicationCodeableConcept?.text || 'No Description'));
           appendToList('#careplan-list', careplans.map(cp => cp.description || 'No Description'));
           appendToList('#device-list', devices.map(d => d.type?.text || 'No Description'));
           appendToList('#allergy-list', allergies.map(a => a.code?.text || 'No Description'));
