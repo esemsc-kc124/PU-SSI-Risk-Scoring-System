@@ -30,7 +30,7 @@
     }
     th {
       background-color: #f0f0f0;
-    }
+    }  
     ul {
       background: #fff;
       padding: 10px 20px;
@@ -54,6 +54,20 @@
       color: blue;
       font-size: 14px;
       margin: 5px 0 30px 20px;
+    }
+    .big-button {
+      padding: 12px 24px;
+      font-size: 18px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    }
+    .big-button:hover {
+      background-color: #0056b3;
     }
   </style>
 </head>
@@ -92,7 +106,9 @@
     <h3>Devices</h3><ul id="device-list" class="collapsible"></ul><div class="toggle-btn" data-target="device-list">Show more...</div>
     <h3>Allergies</h3><ul id="allergy-list" class="collapsible"></ul><div class="toggle-btn" data-target="allergy-list">Show more...</div>
 
-    <button id="predict-btn">Run Prediction</button>
+    <!-- <button id="predict-btn">Run Prediction</button> -->
+    <button id="predict-btn" class="big-button">Run Prediction</button>
+
     <pre id="prediction-result"></pre>
   </div>
 
