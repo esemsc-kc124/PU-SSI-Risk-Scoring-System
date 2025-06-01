@@ -134,7 +134,21 @@
     $(document).on('click', '#predict-btn', function() {
       if (!globalPatientData) return alert("No patient data loaded");
       const payload = JSON.stringify(globalPatientData, null, 2);
-      $('#prediction-result').text("[Mock] Risk Score: 0.78\n\n" + payload);
+      fetch('http://localhost:5000/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(globalPatientData)
+      })
+      .then(response => response.json())
+      .then(result => {
+        $('#prediction-result').text("Risk Score: " + result.risk_score);
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        $('#prediction-result').text("Prediction failed.");
+      });
     });
 
     $(document).on('click', '.toggle-btn', function() {
