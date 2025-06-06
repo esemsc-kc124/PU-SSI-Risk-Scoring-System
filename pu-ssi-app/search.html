@@ -6,96 +6,24 @@
     <title>Select Patient - PU/SSI Risk Scoring System</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <style>
-        /* Page Styles */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #f4f7f6;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-        }
-        .container {
-            width: 100%;
-            max-width: 800px;
-            background: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        header {
-            text-align: center;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-        header h1 {
-            margin: 0;
-            font-size: 2em;
-        }
-        #patient-search-form {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        #patient-name-input {
-            flex-grow: 1;
-            padding: 12px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-        }
-        #patient-search-form button {
-            padding: 12px 24px;
-            font-size: 16px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        #patient-search-form button:hover {
-            background-color: #0056b3;
-        }
-        #results-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        #results-table th, #results-table td {
-            text-align: left;
-            padding: 12px;
-            border-bottom: 1px solid #eee;
-        }
-        #results-table th {
-            background-color: #f8f9fa;
-        }
-        #results-table tr:hover {
-            background-color: #f1f1f1;
-        }
-        .select-patient-btn {
-            padding: 8px 16px;
-            font-size: 14px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        .select-patient-btn:hover {
-            background-color: #218838;
-        }
-        .message-info {
-            text-align: center;
-            padding: 20px;
-            background-color: #e9ecef;
-            border-radius: 6px;
-        }
-        /* Spinner styles, same as in index.html */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+        .container { width: 100%; max-width: 800px; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        header { text-align: center; border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+        header h1 { margin: 0; font-size: 2em; }
+        #patient-search-form { display: flex; gap: 10px; margin-bottom: 20px; }
+        #patient-name-input { flex-grow: 1; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; }
+        button { padding: 12px 24px; font-size: 16px; background-color: #007BFF; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background-color 0.2s; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #results-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        #results-table th, #results-table td { text-align: left; padding: 12px; border-bottom: 1px solid #eee; }
+        #results-table th { background-color: #f8f9fa; }
+        #results-table tr:hover { background-color: #f1f1f1; }
+        .select-patient-btn { padding: 8px 16px; font-size: 14px; background-color: #28a745; }
+        .select-patient-btn:hover { background-color: #218838; }
+        .message-info { text-align: center; padding: 20px; background-color: #e9ecef; border-radius: 6px; color: #333; }
+        .error-message { color: #d9534f; }
+        .pagination-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
         .spinner { margin: 50px auto; width: 70px; text-align: center; }
         .spinner > div { width: 18px; height: 18px; background-color: #333; border-radius: 100%; display: inline-block; animation: sk-bouncedelay 1.4s infinite ease-in-out both; }
         .spinner .bounce1 { animation-delay: -0.32s; }
@@ -104,24 +32,18 @@
     </style>
 </head>
 <body>
-
     <div class="container">
         <header>
             <h1>Select Patient</h1>
-            <p>Please enter the patient's name to search</p>
+            <p>Please enter a patient's name to begin.</p>
         </header>
-
         <main>
             <form id="patient-search-form">
-                <input type="text" id="patient-name-input" placeholder="e.g., Smart, Brad" required>
+                <input type="text" id="patient-name-input" placeholder="e.g., Smart, Tim">
                 <button type="submit">Search</button>
             </form>
 
-            <div id="search-spinner" class="spinner" style="display: none;">
-                <div class="bounce1"></div>
-                <div class="bounce2"></div>
-                <div class="bounce3"></div>
-            </div>
+            <div id="search-spinner" class="spinner" style="display: none;"></div>
 
             <div id="search-results-container">
                 <p id="search-message" class="message-info" style="display: none;"></p>
@@ -134,85 +56,138 @@
                             <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody id="results-body">
-                        </tbody>
+                    <tbody id="results-body"></tbody>
                 </table>
+            </div>
+
+            <div class="pagination-controls">
+                <button id="prev-page-btn" disabled>Previous</button>
+                <span id="page-info"></span>
+                <button id="next-page-btn" disabled>Next</button>
             </div>
         </main>
     </div>
 
     <script>
-        $(document).ready(function() {
+        let paginationLinks = {};
 
-            // Handles the submission of the search form
-            $('#patient-search-form').on('submit', function(event) {
-                event.preventDefault(); // Prevent the form's default submission behavior
-
-                const patientName = $('#patient-name-input').val();
-                if (!patientName) return;
-
-                // Clear old results and show the loading spinner
-                $('#results-body').empty();
-                $('#search-message').hide();
-                $('#search-spinner').show();
-
-                // Make a request to the backend to search for patients.
-                // NOTE: We will need to create this '/api/search-patients' endpoint in the backend.
-                fetch('http://127.0.0.1:5080/api/search-patients?name=' + encodeURIComponent(patientName), {
-                    credentials: 'include' // <--- 添加这一行
-                })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        $('#search-spinner').hide();
-                        if (data && data.length > 0) {
-                            displayResults(data);
-                        } else {
-                            $('#search-message').text('No matching patients found.').show();
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error during patient search:', error);
-                        $('#search-spinner').hide();
-                        $('#search-message').text('Search failed. Please try again later.').show();
-                    });
-            });
-
-            // Renders the search results in the table
-            function displayResults(patients) {
-                const resultsBody = $('#results-body');
-                patients.forEach(patient => {
-                    // Create a new table row for each patient
-                    const patientRow = `
-                        <tr>
-                            <td>${patient.name || 'N/A'}</td>
-                            <td>${patient.birthDate || 'N/A'}</td>
-                            <td>${patient.gender || 'N/A'}</td>
-                            <td>
-                                <button class="select-patient-btn" data-patient-id="${patient.id}">
-                                    Select
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                    resultsBody.append(patientRow);
+        function fetchApi(url) {
+            return fetch(url, { credentials: 'include' })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(errorData => {
+                            throw new Error(errorData.error || `Request failed with status: ${response.status}`);
+                        }).catch(() => {
+                            throw new Error(`Request failed with status: ${response.status}`);
+                        });
+                    }
+                    return response.json();
                 });
-            }
+        }
+        
+        function handleApiResponse(data) {
+            $('#search-spinner').hide();
+            $('#search-message').hide().removeClass('error-message');
+            
+            paginationLinks = data.links || {};
 
-            // Handles the click event for the 'Select' button
-            $('#results-body').on('click', '.select-patient-btn', function() {
-                const patientId = $(this).data('patient-id');
-                if (patientId) {
-                    // Redirect to the main application page, passing the patient ID in the URL
-                    alert('You have selected Patient ID: ' + patientId + '. Redirecting to the main page...');
-                    window.location.href = `index.html?patient=${patientId}`;
+            if (data.patients && data.patients.length > 0) {
+                displayResults(data.patients);
+            } else {
+                $('#results-body').empty(); 
+                $('#search-message').text('No matching patients found.').show();
+            }
+            updatePaginationButtons();
+        }
+        
+        function handleError(error) {
+            console.error('Error during patient fetch:', error);
+            $('#search-spinner').hide();
+            $('#search-message').addClass('error-message').html(`<strong>Error:</strong> ${error.message}`).show();
+        }
+
+        function fetchPatientPage(url) {
+            $('#results-body').empty();
+            $('#search-message').hide();
+            $('#search-spinner').show();
+            const apiUrl = `http://127.0.0.1:5080/api/get-patient-page?url=${encodeURIComponent(url)}`;
+            fetchApi(apiUrl)
+                .then(handleApiResponse)
+                .catch(handleError);
+        }
+
+        function initiateSearch(patientName) {
+            $('#results-body').empty();
+            $('#search-message').hide();
+            $('#search-spinner').show();
+            
+            const url = `http://127.0.0.1:5080/api/search-patients?name=${encodeURIComponent(patientName)}`;
+            fetchApi(url)
+                .then(handleApiResponse)
+                .catch(handleError);
+        }
+
+        function displayResults(patients) {
+            const resultsBody = $('#results-body');
+            resultsBody.empty();
+            patients.forEach(patient => {
+                const patientRow = `
+                    <tr>
+                        <td>${patient.name || 'N/A'}</td>
+                        <td>${patient.birthDate || 'N/A'}</td>
+                        <td>${patient.gender || 'N/A'}</td>
+                        <td><button class="select-patient-btn" data-patient-id="${patient.id}">Select</button></td>
+                    </tr>`;
+                resultsBody.append(patientRow);
+            });
+        }
+
+        function updatePaginationButtons() {
+            // 总是根据最新的 paginationLinks 来更新按钮状态
+            $('#prev-page-btn').prop('disabled', !paginationLinks.previous);
+            $('#next-page-btn').prop('disabled', !paginationLinks.next);
+        }
+
+        function clearResults() {
+            $('#results-body').empty();
+            $('#search-message').hide();
+            paginationLinks = {};
+            updatePaginationButtons();
+        }
+
+        $(document).ready(function() {
+            // 页面加载时不做任何事，保持空白
+            
+            $('#patient-search-form').on('submit', function(event) {
+                event.preventDefault();
+                const patientName = $('#patient-name-input').val().trim();
+                
+                if (patientName) {
+                    initiateSearch(patientName);
+                } else {
+                    // 如果用户清空了搜索框并提交，则清空结果
+                    clearResults();
                 }
             });
 
+            $('#next-page-btn').on('click', function() {
+                if (paginationLinks.next) {
+                    fetchPatientPage(paginationLinks.next);
+                }
+            });
+
+            $('#prev-page-btn').on('click', function() {
+                if (paginationLinks.previous) {
+                    fetchPatientPage(paginationLinks.previous);
+                }
+            });
+
+            $('#results-body').on('click', '.select-patient-btn', function() {
+                const patientId = $(this).data('patient-id');
+                if (patientId) {
+                    window.location.href = `index.html?patient=${patientId}`;
+                }
+            });
         });
     </script>
 </body>

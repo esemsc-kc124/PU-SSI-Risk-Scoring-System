@@ -8,13 +8,15 @@
     body { font-family: Arial, sans-serif; margin: 0; padding: 40px; background-color: #f9f9f9; display: flex; justify-content: center; }
     .container { width: 100%; max-width: 960px; }
     h2 { margin-top: 40px; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
+    h3 { margin-top: 30px; }
     table { width: 80%; border-collapse: collapse; margin: 10px 0 30px; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
     th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
     th { background-color: #f0f0f0; }
-    ul { background: #fff; padding: 10px 20px; width: 80%; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    ul { list-style-type: none; padding: 10px 20px; width: 80%; box-shadow: 0 0 5px rgba(0,0,0,0.1); background: #fff; }
     ul.collapsible { max-height: 160px; overflow: hidden; }
     ul.expanded { max-height: none; overflow: visible; }
-    ul li { padding: 5px 0; border-bottom: 1px solid #eee; }
+    ul li { padding: 8px 0; border-bottom: 1px solid #eee; }
+    ul li:last-child { border-bottom: none; }
     .toggle-btn { cursor: pointer; color: blue; font-size: 14px; margin: 5px 0 30px 20px; }
     .big-button { padding: 12px 24px; font-size: 18px; background-color: #007BFF; color: white; text-decoration: none; border: none; border-radius: 6px; cursor: pointer; margin-top: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); display: inline-block; }
     .big-button:hover { background-color: #0056b3; }
@@ -26,6 +28,7 @@
     .spinner .bounce1 { animation-delay: -0.32s; }
     .spinner .bounce2 { animation-delay: -0.16s; }
     @keyframes sk-bouncedelay { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
+    code.code-block { display: block; background-color: #eee; padding: 5px; border-radius: 3px; margin-top: 5px; white-space: pre-wrap; }
   </style>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 </head>
@@ -49,7 +52,8 @@
       <tr><th>Gender:</th><td id='gender'></td></tr>
       <tr><th>Date of Birth:</th><td id='birthdate'></td></tr>
     </table>
-    <h3>Observation Resource</h3>
+    
+    <h3>Key Observations</h3>
     <table>
       <tr><th>Height:</th><td id='height'></td></tr>
       <tr><th>Systolic BP:</th><td id='systolicbp'></td></tr>
@@ -57,6 +61,12 @@
       <tr><th>LDL:</th><td id='ldl'></td></tr>
       <tr><th>HDL:</th><td id='hdl'></td></tr>
     </table>
+
+    <!-- 终极版调试列表 -->
+    <h3>All Available Observations (with Full Coding Array)</h3>
+    <ul id="raw-observation-list" class="collapsible"></ul>
+    <div class="toggle-btn" data-target="raw-observation-list">Show more...</div>
+    
     <h3>Conditions</h3><ul id="condition-list" class="collapsible"></ul><div class="toggle-btn" data-target="condition-list">Show more...</div>
     <h3>Procedures</h3><ul id="procedure-list" class="collapsible"></ul><div class="toggle-btn" data-target="procedure-list">Show more...</div>
     <h3>Encounters</h3><ul id="encounter-list" class="collapsible"></ul><div class="toggle-btn" data-target="encounter-list">Show more...</div>
@@ -73,70 +83,103 @@
 <script>
     let globalPatientData = null;
 
-    // A. 页面加载逻辑
+    // ==================================================================
+    // 核心数据处理逻辑 (使用 byCode/byCodes 模式重构)
+    // ==================================================================
+
+    function byCode(observations) {
+        const bank = {};
+        if (!Array.isArray(observations)) return bank;
+        observations.forEach(obs => {
+            if (obs.code && Array.isArray(obs.code.coding)) {
+                obs.code.coding.forEach(coding => {
+                    if (coding.code) {
+                        bank[coding.code] = bank[coding.code] || [];
+                        bank[coding.code].push(obs);
+                    }
+                });
+            }
+        });
+        return bank;
+    }
+
+    function byCodes(bank) {
+        return function(...codes) {
+            const ret = [];
+            codes.forEach(code => {
+                const set = bank[code];
+                if (set) { ret.push(...set); }
+            });
+            return ret;
+        }
+    }
+
+    function getQuantityValueAndUnit(ob) {
+        if (!ob || !ob.valueQuantity || ob.valueQuantity.value === undefined) return 'N/A';
+        return `${ob.valueQuantity.value.toFixed(2)} ${ob.valueQuantity.unit || ''}`;
+    }
+
+    function getBloodPressureValue(obsArray, componentCode) {
+        // 血压记录可能有多条，我们需要找到最新的一条或最合适的一条
+        // 这里为了简单，我们先找第一条包含所需成分的记录
+        const bpObservation = obsArray.find(o => o.component && o.component.some(c => c.code?.coding?.some(coding => coding.code === componentCode)));
+        
+        if (!bpObservation) return 'N/A';
+
+        const component = bpObservation.component.find(c => c.code?.coding?.some(coding => coding.code === componentCode));
+        if (component?.valueQuantity) {
+            return `${component.valueQuantity.value} ${component.valueQuantity.unit || ''}`;
+        }
+        return 'N/A';
+    }
+
+
+    // ==================================================================
+    // 页面主逻辑
+    // ==================================================================
+
     $(document).ready(function() {
       const urlParams = new URLSearchParams(window.location.search);
       const patientId = urlParams.get('patient');
-
       if (patientId) {
         $('#login-container').hide();
         $('#loading').show();
         fetch(`http://127.0.0.1:5080/get_patient_data?patient=${patientId}`, { credentials: 'include' })
-          .then(response => {
-            if (!response.ok) throw new Error('Failed to fetch data');
-            return response.json();
-          })
+          .then(response => { if (!response.ok) throw new Error('Failed to fetch data'); return response.json(); })
           .then(data => {
+            console.log("--- [DEBUG] Raw data received from backend ---", data);
             globalPatientData = data; 
             processAndDisplayData(data);
           })
-          .catch(error => {
-            console.error('Error fetching patient data:', error);
-            $('#loading').hide();
-            alert('Failed to load patient data. Please try again.');
-          });
+          .catch(error => { console.error('Error fetching patient data:', error); $('#loading').hide(); alert('Failed to load patient data. Please try again.'); });
       }
     });
     
-    // B. 数据处理函数 - 已补充完整
     function processAndDisplayData(data) {
       const patient = data.patient || {};
       const observations = data.observations?.entry?.map(e => e.resource) || [];
       const name = patient.name?.[0];
+      const obsBank = byCode(observations);
+      const findObsByCode = byCodes(obsBank);
       
-      // 辅助函数：根据LOINC code从observations中查找值
-      function getObservationValue(code) {
-          const observation = observations.find(o => o.code?.coding?.[0]?.code === code);
-          if (observation?.valueQuantity) {
-              return `${observation.valueQuantity.value.toFixed(2)} ${observation.valueQuantity.unit}`;
-          }
-          return 'N/A';
-      }
+      // 使用我们发现的正确编码来查找数据
+      const heightObs = findObsByCode('3137-7', '8302-2'); // 同时查找新旧两个编码，增加兼容性
+      const bloodPressureObs = findObsByCode('85354-9');   // <-- 这里是关键的修改！
+      const hdlObs = findObsByCode('2085-9');
+      const ldlObs = findObsByCode('2089-1');
 
-      // 辅助函数：查找血压
-      function getBloodPressureValue(bpCode, componentCode) {
-          const bpObservation = observations.find(o => o.code?.coding?.[0]?.code === bpCode);
-          const component = bpObservation?.component?.find(c => c.code?.coding?.[0]?.code === componentCode);
-          if (component?.valueQuantity) {
-              return `${component.valueQuantity.value} ${component.valueQuantity.unit}`;
-          }
-          return 'N/A';
-      }
-
-      // 将所有解析后的数据放入一个对象
       const processedData = {
-          fname: name?.given?.join(' ') || '',
-          lname: name?.family || '',
-          gender: patient.gender,
-          birthdate: patient.birthDate,
-          height: getObservationValue('8302-2'), // LOINC code for Body Height
-          systolicbp: getBloodPressureValue('55284-4', '8480-6'), // Systolic
-          diastolicbp: getBloodPressureValue('55284-4', '8462-4'), // Diastolic
-          hdl: getObservationValue('2085-9'), // LOINC for HDL
-          ldl: getObservationValue('2089-1') // LOINC for LDL
+          fname: name?.given?.join(' ') || 'N/A',
+          lname: name?.family || 'N/A',
+          gender: patient.gender || 'N/A',
+          birthdate: patient.birthDate || 'N/A',
+          height: getQuantityValueAndUnit(heightObs[0]),
+          systolicbp: getBloodPressureValue(bloodPressureObs, '8480-6'),
+          diastolicbp: getBloodPressureValue(bloodPressureObs, '8462-4'),
+          hdl: getQuantityValueAndUnit(hdlObs[0]),
+          ldl: getQuantityValueAndUnit(ldlObs[0])
       };
       
-      // 填充所有列表
       appendToList('#condition-list', data.conditions || []);
       appendToList('#procedure-list', data.procedures || []);
       appendToList('#encounter-list', data.encounters || []);
@@ -144,37 +187,51 @@
       appendToList('#device-list', data.devices || []);
       appendToList('#allergy-list', data.allergies || []);
       
+      fillRawObservations(observations);
       drawVisualization(processedData);
     }
 
-    // C. 数据显示函数 - 已补充完整
+    function fillRawObservations(observations) {
+        const rawObsList = $('#raw-observation-list');
+        rawObsList.empty();
+        if (!observations || observations.length === 0) {
+            rawObsList.append('<li>No observations found for this patient.</li>');
+            return;
+        }
+        observations.forEach(obs => {
+            const obsText = obs.code?.text || 'Unnamed Observation';
+            const codesText = obs.code?.coding?.map(c => `{ system: "${c.system}", code: "${c.code}" }`).join(',\n') || 'No codes';
+            let obsValue = 'N/A';
+            if (obs.valueQuantity) {
+                obsValue = `${obs.valueQuantity.value} ${obs.valueQuantity.unit || ''}`;
+            } else if (obs.component && obs.component.length > 0) {
+                obsValue = obs.component.map(c => {
+                    const compValue = c.valueQuantity ? `${c.valueQuantity.value} ${c.valueQuantity.unit || ''}` : 'N/A';
+                    return `${c.code.text}: ${compValue}`;
+                }).join('; ');
+            } else if (obs.valueCodeableConcept) {
+                obsValue = obs.valueCodeableConcept.text || obs.valueCodeableConcept.coding?.[0]?.display || 'N/A';
+            } else if (obs.valueString) {
+                obsValue = obs.valueString;
+            }
+            rawObsList.append(`<li><strong>${obsText}</strong>: ${obsValue}<code class="code-block">Codings: [\n${codesText}\n]</code></li>`);
+        });
+    }
+
     function drawVisualization(p) {
-      $('#loading').hide();
-      $('#holder').show();
-      
-      $('#fname').text(p.fname || 'N/A');
-      $('#lname').text(p.lname || 'N/A');
-      $('#gender').text(p.gender || 'N/A');
-      $('#birthdate').text(p.birthdate || 'N/A');
-      $('#height').text(p.height || 'N/A');
-      $('#systolicbp').text(p.systolicbp || 'N/A');
-      $('#diastolicbp').text(p.diastolicbp || 'N/A');
-      $('#ldl').text(p.ldl || 'N/A');
-      $('#hdl').text(p.hdl || 'N/A');
+      $('#loading').hide(); $('#holder').show();
+      $('#fname').text(p.fname); $('#lname').text(p.lname);
+      $('#gender').text(p.gender); $('#birthdate').text(p.birthdate);
+      $('#height').text(p.height); $('#systolicbp').text(p.systolicbp);
+      $('#diastolicbp').text(p.diastolicbp); $('#ldl').text(p.ldl); $('#hdl').text(p.hdl);
     }
 
-    // D. 填充列表的辅助函数
     function appendToList(selector, items) {
-      const $el = $(selector);
-      $el.empty();
-      if (!items || items.length === 0) {
-        $el.append('<li>No data available</li>');
-      } else {
-        items.forEach(i => $el.append(`<li>${i || 'No Description'}</li>`));
-      }
+      const $el = $(selector); $el.empty();
+      if (!items || items.length === 0) { $el.append('<li>No data available</li>'); }
+      else { items.forEach(i => $el.append(`<li>${i || 'No Description'}</li>`)); }
     }
 
-    // E. 预测按钮的点击事件
     $(document).on('click', '#predict-btn', function() {
       if (!globalPatientData) return alert("No patient data loaded.");
       $('#prediction-result').text("Running prediction...");
@@ -183,17 +240,10 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(globalPatientData)
       })
-      .then(response => response.json())
-      .then(result => {
-        $('#prediction-result').text("Risk Score: " + result.risk_score);
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        $('#prediction-result').text("Prediction failed.");
-      });
+      .then(response => response.json()).then(result => { $('#prediction-result').text("Risk Score: " + result.risk_score); })
+      .catch(error => { console.error('Error:', error); $('#prediction-result').text("Prediction failed."); });
     });
 
-    // F. “显示更多/更少”按钮的点击事件
     $(document).on('click', '.toggle-btn', function() {
       const target = $(this).data('target');
       const $ul = $('#' + target);
