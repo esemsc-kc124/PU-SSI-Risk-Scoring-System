@@ -17,7 +17,7 @@ The system is composed of three main parts:
 * Python 3.x
 * Required Python libraries:
     ```bash
-    pip install -r requirements
+    pip install -r requirements.txt
     ```
 
 ## Running the Application
@@ -28,6 +28,7 @@ To run the full web application, you need to start both the backend and frontend
 
 In your first terminal, navigate to the project directory and run the Flask application:
 ```bash
+cd pu-ssi-app
 python simulator.py
 ```
 This will start the backend server on `http://127.0.0.1:5080`.
@@ -36,6 +37,7 @@ This will start the backend server on `http://127.0.0.1:5080`.
 
 In a second terminal, navigate to the directory containing the frontend files (`index.html`, `search.html`, etc.) and start a simple Python web server:
 ```bash
+cd pu-ssi-app
 python -m http.server 8000
 ```
 This will serve the frontend on `http://127.0.0.1:8000`.
@@ -74,12 +76,16 @@ To test the core data fetching and prediction logic without the web interface, y
 1.  **Get a Bearer Token**: Run the web application once to authenticate and obtain a valid provider access token. Paste this token into the script.
 2.  **Execute the script** from your terminal, passing a patient ID as an argument:
     ```bash
+    cd pu-ssi-app
     python predict_cli.py 12742399
     ```
 
 ## What To Do Next
 
 Based on the project plan and meeting logs, the following are the key priorities for future work:
+* **Write Patient's Risk Score Back to Cerner**:
+    * Load Patient's data as a json file and write the risk score inside Observation/Condition.
+    * Send it back to FHIR server.
 
 * **Develop the Prediction Model**:
     * [cite_start]Extract and preprocess training data from the MIMIC-IV dataset[cite: 3, 12, 26].
