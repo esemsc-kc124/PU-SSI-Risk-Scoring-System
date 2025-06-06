@@ -31,6 +31,7 @@
     code.code-block { display: block; background-color: #eee; padding: 5px; border-radius: 3px; margin-top: 5px; white-space: pre-wrap; }
   </style>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <div class="container">
@@ -59,7 +60,6 @@
       <tr><th>Height:</th><td id='height'></td></tr>
       <tr><th>Weight:</th><td id='weight'></td></tr>
       <tr><th>BMI:</th><td id='bmi'></td></tr>
-      <tr><th>Computed BMI:</th><td id='bmi-computed'></td></tr>
       <tr><th>Systolic BP:</th><td id='systolicbp'></td></tr>
       <tr><th>Diastolic BP:</th><td id='diastolicbp'></td></tr>
       <tr><th>LDL:</th><td id='ldl'></td></tr>
@@ -81,6 +81,14 @@
 
     <button id="predict-btn" class="big-button">Run Prediction</button>
     <pre id="prediction-result"></pre>
+    <!-- 风险分数可视化模块 -->
+    <h3>Risk Score Visualization</h3>
+    <canvas id="risk-score-chart" width="400" height="200" style="background:#fff;box-shadow:0 0 5px #ccc;margin-bottom:20px;"></canvas>
+
+    <!-- SHAP解释可视化模块 -->
+    <h3>SHAP Explanation</h3>
+    <canvas id="shap-chart" width="400" height="200" style="background:#fff;box-shadow:0 0 5px #ccc;"></canvas>
+    <!-- ...existing code... -->
   </div>
 
 </div>
@@ -158,6 +166,23 @@
           })
           .catch(error => { console.error('Error fetching patient data:', error); $('#loading').hide(); alert('Failed to load patient data. Please try again.'); });
       }
+      const ctx1 = document.getElementById('risk-score-chart').getContext('2d');
+      ctx1.fillStyle = '#007BFF';
+      ctx1.fillRect(50, 150, 100, -80); // 假设风险分数80
+      ctx1.fillStyle = '#333';
+      ctx1.fillText('Risk Score: 80', 60, 170);
+
+      // 假数据占位：SHAP解释
+      const ctx2 = document.getElementById('shap-chart').getContext('2d');
+      // 假设有3个特征的SHAP值
+      const shapValues = [0.3, -0.2, 0.1];
+      const features = ['Age', 'BMI', 'BP'];
+      shapValues.forEach((v, i) => {
+        ctx2.fillStyle = v > 0 ? '#28a745' : '#dc3545';
+        ctx2.fillRect(60 + i*80, 150, 40, -v*100);
+        ctx2.fillStyle = '#333';
+        ctx2.fillText(features[i], 60 + i*80, 170);
+      });
     });
     
     function processAndDisplayData(data) {
@@ -171,7 +196,6 @@
       const heightObs = findObsByCode('3137-7', '8302-2'); // 同时查找新旧两个编码，增加兼容性
       const weightObs = findObsByCode('3141-9', '29463-7'); // 同时查找新旧两个编码，增加兼容性
       const bmiObs = findObsByCode('39156-5', '39157-3'); // 同时查找新旧两个编码，增加兼容性
-      const bmiComputed = computeBMI(heightObs, weightObs); // 根据身高和体重计算BMI
       const bloodPressureObs = findObsByCode('85354-9');   // <-- 这里是关键的修改！
       const hdlObs = findObsByCode('2085-9');
       const ldlObs = findObsByCode('2089-1', '13457-7');
@@ -186,7 +210,6 @@
           height: getQuantityValueAndUnit(heightObs[0]),
           weight: getQuantityValueAndUnit(weightObs[0]),
           bmi: getQuantityValueAndUnit(bmiObs[0]),
-          bmiComputed: bmiComputed,
           systolicbp: getBloodPressureValue(bloodPressureObs, '8480-6'),
           diastolicbp: getBloodPressureValue(bloodPressureObs, '8462-4'),
           hdl: getQuantityValueAndUnit(hdlObs[0]),
@@ -237,7 +260,7 @@
       $('#fname').text(p.fname); $('#lname').text(p.lname);
       $('#gender').text(p.gender); $('#birthdate').text(p.birthdate); $('#age').text(p.age);
       $('#height').text(p.height); $('#weight').text(p.weight);
-      $('#bmi').text(p.bmi); $('#bmi-computed').text(p.bmiComputed);
+      $('#bmi').text(p.bmi);
       $('#systolicbp').text(p.systolicbp); $('#diastolicbp').text(p.diastolicbp);
       $('#ldl').text(p.ldl); $('#hdl').text(p.hdl);
       $('#smoke').text(p.smoke);
@@ -247,21 +270,6 @@
       const $el = $(selector); $el.empty();
       if (!items || items.length === 0) { $el.append('<li>No data available</li>'); }
       else { items.forEach(i => $el.append(`<li>${i || 'No Description'}</li>`)); }
-    }
-
-    function computeBMI(height, weight) {
-      if (
-        typeof height === 'string' && height.includes(' ') &&
-        typeof weight === 'string' && weight.includes(' ')
-      ) {
-        const heightVal = parseFloat(height.split(' ')[0]);
-        const weightInKg = parseFloat(weight.split(' ')[0]);
-        if (!isNaN(heightVal) && !isNaN(weightVal) && heightVal > 0){
-          const heightInMeters = heightVal / 100; // Convert cm to meters
-          return (weightVal / (heightInMeters * heightInMeters)).toFixed(2) + ' kg/m²';
-        }
-      }
-      return 'N/A';
     }
 
     // 辅助函数：计算年龄
