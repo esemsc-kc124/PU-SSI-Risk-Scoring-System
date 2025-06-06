@@ -51,15 +51,20 @@
       <tr><th>Last Name:</th><td id='lname'></td></tr>
       <tr><th>Gender:</th><td id='gender'></td></tr>
       <tr><th>Date of Birth:</th><td id='birthdate'></td></tr>
+      <tr><th>Age:</th><td id='age'></td></tr>
     </table>
     
     <h3>Key Observations</h3>
     <table>
       <tr><th>Height:</th><td id='height'></td></tr>
+      <tr><th>Weight:</th><td id='weight'></td></tr>
+      <tr><th>BMI:</th><td id='bmi'></td></tr>
+      <tr><th>Computed BMI:</th><td id='bmi-computed'></td></tr>
       <tr><th>Systolic BP:</th><td id='systolicbp'></td></tr>
       <tr><th>Diastolic BP:</th><td id='diastolicbp'></td></tr>
       <tr><th>LDL:</th><td id='ldl'></td></tr>
       <tr><th>HDL:</th><td id='hdl'></td></tr>
+      <tr><th>Smoking Status:</th><td id='smoke'></td></tr>
     </table>
 
     <!-- 终极版调试列表 -->
@@ -164,20 +169,29 @@
       
       // 使用我们发现的正确编码来查找数据
       const heightObs = findObsByCode('3137-7', '8302-2'); // 同时查找新旧两个编码，增加兼容性
+      const weightObs = findObsByCode('3141-9', '29463-7'); // 同时查找新旧两个编码，增加兼容性
+      const bmiObs = findObsByCode('39156-5', '39157-3'); // 同时查找新旧两个编码，增加兼容性
+      const bmiComputed = computeBMI(heightObs, weightObs); // 根据身高和体重计算BMI
       const bloodPressureObs = findObsByCode('85354-9');   // <-- 这里是关键的修改！
       const hdlObs = findObsByCode('2085-9');
-      const ldlObs = findObsByCode('2089-1');
+      const ldlObs = findObsByCode('2089-1', '13457-7');
+      const tobaccoObs = findObsByCode('88028-6');
 
       const processedData = {
           fname: name?.given?.join(' ') || 'N/A',
           lname: name?.family || 'N/A',
           gender: patient.gender || 'N/A',
           birthdate: patient.birthDate || 'N/A',
+          age: computeAge(patient.birthDate), // 计算年龄
           height: getQuantityValueAndUnit(heightObs[0]),
+          weight: getQuantityValueAndUnit(weightObs[0]),
+          bmi: getQuantityValueAndUnit(bmiObs[0]),
+          bmiComputed: bmiComputed,
           systolicbp: getBloodPressureValue(bloodPressureObs, '8480-6'),
           diastolicbp: getBloodPressureValue(bloodPressureObs, '8462-4'),
           hdl: getQuantityValueAndUnit(hdlObs[0]),
-          ldl: getQuantityValueAndUnit(ldlObs[0])
+          ldl: getQuantityValueAndUnit(ldlObs[0]),
+          smoke: tobaccoObs.length > 0 ? 'Yes' : 'No'
       };
       
       appendToList('#condition-list', data.conditions || []);
@@ -221,15 +235,42 @@
     function drawVisualization(p) {
       $('#loading').hide(); $('#holder').show();
       $('#fname').text(p.fname); $('#lname').text(p.lname);
-      $('#gender').text(p.gender); $('#birthdate').text(p.birthdate);
-      $('#height').text(p.height); $('#systolicbp').text(p.systolicbp);
-      $('#diastolicbp').text(p.diastolicbp); $('#ldl').text(p.ldl); $('#hdl').text(p.hdl);
+      $('#gender').text(p.gender); $('#birthdate').text(p.birthdate); $('#age').text(p.age);
+      $('#height').text(p.height); $('#weight').text(p.weight);
+      $('#bmi').text(p.bmi); $('#bmi-computed').text(p.bmiComputed);
+      $('#systolicbp').text(p.systolicbp); $('#diastolicbp').text(p.diastolicbp);
+      $('#ldl').text(p.ldl); $('#hdl').text(p.hdl);
+      $('#smoke').text(p.smoke);
     }
 
     function appendToList(selector, items) {
       const $el = $(selector); $el.empty();
       if (!items || items.length === 0) { $el.append('<li>No data available</li>'); }
       else { items.forEach(i => $el.append(`<li>${i || 'No Description'}</li>`)); }
+    }
+
+    function computeBMI(height, weight) {
+      if (
+        typeof height === 'string' && height.includes(' ') &&
+        typeof weight === 'string' && weight.includes(' ')
+      ) {
+        const heightVal = parseFloat(height.split(' ')[0]);
+        const weightInKg = parseFloat(weight.split(' ')[0]);
+        if (!isNaN(heightVal) && !isNaN(weightVal) && heightVal > 0){
+          const heightInMeters = heightVal / 100; // Convert cm to meters
+          return (weightVal / (heightInMeters * heightInMeters)).toFixed(2) + ' kg/m²';
+        }
+      }
+      return 'N/A';
+    }
+
+    // 辅助函数：计算年龄
+    function computeAge(birthDate) {
+      const bd = new Date(birthDate);
+      const today = new Date();
+      const age = today.getFullYear() - bd.getFullYear() - 
+                  (today < new Date(today.getFullYear(), bd.getMonth(), bd.getDate()) ? 1 : 0);
+      return age >= 0 ? age : 'N/A';
     }
 
     $(document).on('click', '#predict-btn', function() {
