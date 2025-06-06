@@ -54,7 +54,8 @@ def callback():
     response = requests.post(TOKEN_URL, data=token_params)
     response.raise_for_status()
     session['provider_access_token'] = response.json().get('access_token')
-    print("Provider access token successfully obtained and stored.")
+    print("Provider access token successfully obtained and stored : ")
+    print(session['provider_access_token'])
     return redirect("http://127.0.0.1:8000/search.html")
 
 
