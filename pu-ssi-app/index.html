@@ -3,85 +3,45 @@
 <head>
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <title>PU-SSI-Risk-Scoring-System</title>
-  <link rel="stylesheet" href="./src/css/pu-ssi-app.css">
+  <title>PU-SSI Risk Scoring System</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 40px;
-      background-color: #f9f9f9;
-    }
-    h2 {
-      margin-top: 40px;
-      border-bottom: 2px solid #ddd;
-      padding-bottom: 5px;
-    }
-    table {
-      width: 60%;
-      border-collapse: collapse;
-      margin: 10px 0 30px;
-      background: #fff;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    th, td {
-      text-align: left;
-      padding: 10px;
-      border-bottom: 1px solid #eee;
-    }
-    th {
-      background-color: #f0f0f0;
-    }  
-    ul {
-      background: #fff;
-      padding: 10px 20px;
-      width: 60%;
-      box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    }
-    ul.collapsible {
-      max-height: 160px;
-      overflow: hidden;
-    }
-    ul.expanded {
-      max-height: none;
-      overflow: visible;
-    }
-    ul li {
-      padding: 5px 0;
-      border-bottom: 1px solid #eee;
-    }
-    .toggle-btn {
-      cursor: pointer;
-      color: blue;
-      font-size: 14px;
-      margin: 5px 0 30px 20px;
-    }
-    .big-button {
-      padding: 12px 24px;
-      font-size: 18px;
-      background-color: #007BFF;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      margin-top: 20px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-    }
-    .big-button:hover {
-      background-color: #0056b3;
-    }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 40px; background-color: #f9f9f9; display: flex; justify-content: center; }
+    .container { width: 100%; max-width: 960px; }
+    h2 { margin-top: 40px; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
+    table { width: 80%; border-collapse: collapse; margin: 10px 0 30px; background: #fff; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    th, td { text-align: left; padding: 10px; border-bottom: 1px solid #eee; }
+    th { background-color: #f0f0f0; }
+    ul { background: #fff; padding: 10px 20px; width: 80%; box-shadow: 0 0 5px rgba(0,0,0,0.1); }
+    ul.collapsible { max-height: 160px; overflow: hidden; }
+    ul.expanded { max-height: none; overflow: visible; }
+    ul li { padding: 5px 0; border-bottom: 1px solid #eee; }
+    .toggle-btn { cursor: pointer; color: blue; font-size: 14px; margin: 5px 0 30px 20px; }
+    .big-button { padding: 12px 24px; font-size: 18px; background-color: #007BFF; color: white; text-decoration: none; border: none; border-radius: 6px; cursor: pointer; margin-top: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); display: inline-block; }
+    .big-button:hover { background-color: #0056b3; }
+    .login-container { text-align: center; padding: 80px 40px; background: #fff; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .login-container h1 { font-size: 2.5em; margin-bottom: 20px; }
+    .login-container p { font-size: 1.2em; color: #666; margin-bottom: 40px; }
+    .spinner { margin: 100px auto; width: 70px; text-align: center; }
+    .spinner > div { width: 18px; height: 18px; background-color: #333; border-radius: 100%; display: inline-block; animation: sk-bouncedelay 1.4s infinite ease-in-out both; }
+    .spinner .bounce1 { animation-delay: -0.32s; }
+    .spinner .bounce2 { animation-delay: -0.16s; }
+    @keyframes sk-bouncedelay { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
   </style>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 </head>
 <body>
-  <div id='errors'></div>
-  <div id="loading" class="spinner">
-    <div class="bounce1"></div>
-    <div class="bounce2"></div>
-    <div class="bounce3"></div>
+<div class="container">
+
+  <div id="login-container">
+    <h1>Welcome to the PU/SSI Risk Scoring System</h1>
+    <p>Please log in with your provider credentials to begin.</p>
+    <a href="http://127.0.0.1:5080/launch" class="big-button">Login with FHIR</a>
   </div>
+
+  <div id="loading" class="spinner" style="display: none;"></div>
 
   <div id='holder' style="display: none">
     <h2>PU-SSI Risk Scoring System</h2>
-
     <h3>Patient Resource</h3>
     <table>
       <tr><th>First Name:</th><td id='fname'></td></tr>
@@ -89,7 +49,6 @@
       <tr><th>Gender:</th><td id='gender'></td></tr>
       <tr><th>Date of Birth:</th><td id='birthdate'></td></tr>
     </table>
-
     <h3>Observation Resource</h3>
     <table>
       <tr><th>Height:</th><td id='height'></td></tr>
@@ -98,7 +57,6 @@
       <tr><th>LDL:</th><td id='ldl'></td></tr>
       <tr><th>HDL:</th><td id='hdl'></td></tr>
     </table>
-
     <h3>Conditions</h3><ul id="condition-list" class="collapsible"></ul><div class="toggle-btn" data-target="condition-list">Show more...</div>
     <h3>Procedures</h3><ul id="procedure-list" class="collapsible"></ul><div class="toggle-btn" data-target="procedure-list">Show more...</div>
     <h3>Encounters</h3><ul id="encounter-list" class="collapsible"></ul><div class="toggle-btn" data-target="encounter-list">Show more...</div>
@@ -106,39 +64,123 @@
     <h3>Devices</h3><ul id="device-list" class="collapsible"></ul><div class="toggle-btn" data-target="device-list">Show more...</div>
     <h3>Allergies</h3><ul id="allergy-list" class="collapsible"></ul><div class="toggle-btn" data-target="allergy-list">Show more...</div>
 
-    <!-- <button id="predict-btn">Run Prediction</button> -->
     <button id="predict-btn" class="big-button">Run Prediction</button>
-
     <pre id="prediction-result"></pre>
   </div>
 
-  <script src="./lib/js/fhir-client-v0.1.12.js"></script>
-  <script src="./lib/js/fhir-client-cerner-additions-1.0.0.js"></script>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-  <script src="./src/js/pu-ssi-app.js"></script>
+</div>
 
-  <script>
+<script>
     let globalPatientData = null;
 
-    extractData().then(
-      function(p) {
-        globalPatientData = p;
-        drawVisualization(p);
-      },
-      function() {
-        $('#loading').hide();
-        $('#errors').html('<p> Failed to call FHIR Service </p>');
-      }
-    );
+    // A. 页面加载逻辑
+    $(document).ready(function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const patientId = urlParams.get('patient');
 
+      if (patientId) {
+        $('#login-container').hide();
+        $('#loading').show();
+        fetch(`http://127.0.0.1:5080/get_patient_data?patient=${patientId}`, { credentials: 'include' })
+          .then(response => {
+            if (!response.ok) throw new Error('Failed to fetch data');
+            return response.json();
+          })
+          .then(data => {
+            globalPatientData = data; 
+            processAndDisplayData(data);
+          })
+          .catch(error => {
+            console.error('Error fetching patient data:', error);
+            $('#loading').hide();
+            alert('Failed to load patient data. Please try again.');
+          });
+      }
+    });
+    
+    // B. 数据处理函数 - 已补充完整
+    function processAndDisplayData(data) {
+      const patient = data.patient || {};
+      const observations = data.observations?.entry?.map(e => e.resource) || [];
+      const name = patient.name?.[0];
+      
+      // 辅助函数：根据LOINC code从observations中查找值
+      function getObservationValue(code) {
+          const observation = observations.find(o => o.code?.coding?.[0]?.code === code);
+          if (observation?.valueQuantity) {
+              return `${observation.valueQuantity.value.toFixed(2)} ${observation.valueQuantity.unit}`;
+          }
+          return 'N/A';
+      }
+
+      // 辅助函数：查找血压
+      function getBloodPressureValue(bpCode, componentCode) {
+          const bpObservation = observations.find(o => o.code?.coding?.[0]?.code === bpCode);
+          const component = bpObservation?.component?.find(c => c.code?.coding?.[0]?.code === componentCode);
+          if (component?.valueQuantity) {
+              return `${component.valueQuantity.value} ${component.valueQuantity.unit}`;
+          }
+          return 'N/A';
+      }
+
+      // 将所有解析后的数据放入一个对象
+      const processedData = {
+          fname: name?.given?.join(' ') || '',
+          lname: name?.family || '',
+          gender: patient.gender,
+          birthdate: patient.birthDate,
+          height: getObservationValue('8302-2'), // LOINC code for Body Height
+          systolicbp: getBloodPressureValue('55284-4', '8480-6'), // Systolic
+          diastolicbp: getBloodPressureValue('55284-4', '8462-4'), // Diastolic
+          hdl: getObservationValue('2085-9'), // LOINC for HDL
+          ldl: getObservationValue('2089-1') // LOINC for LDL
+      };
+      
+      // 填充所有列表
+      appendToList('#condition-list', data.conditions || []);
+      appendToList('#procedure-list', data.procedures || []);
+      appendToList('#encounter-list', data.encounters || []);
+      appendToList('#careplan-list', data.careplans || []);
+      appendToList('#device-list', data.devices || []);
+      appendToList('#allergy-list', data.allergies || []);
+      
+      drawVisualization(processedData);
+    }
+
+    // C. 数据显示函数 - 已补充完整
+    function drawVisualization(p) {
+      $('#loading').hide();
+      $('#holder').show();
+      
+      $('#fname').text(p.fname || 'N/A');
+      $('#lname').text(p.lname || 'N/A');
+      $('#gender').text(p.gender || 'N/A');
+      $('#birthdate').text(p.birthdate || 'N/A');
+      $('#height').text(p.height || 'N/A');
+      $('#systolicbp').text(p.systolicbp || 'N/A');
+      $('#diastolicbp').text(p.diastolicbp || 'N/A');
+      $('#ldl').text(p.ldl || 'N/A');
+      $('#hdl').text(p.hdl || 'N/A');
+    }
+
+    // D. 填充列表的辅助函数
+    function appendToList(selector, items) {
+      const $el = $(selector);
+      $el.empty();
+      if (!items || items.length === 0) {
+        $el.append('<li>No data available</li>');
+      } else {
+        items.forEach(i => $el.append(`<li>${i || 'No Description'}</li>`));
+      }
+    }
+
+    // E. 预测按钮的点击事件
     $(document).on('click', '#predict-btn', function() {
-      if (!globalPatientData) return alert("No patient data loaded");
-      const payload = JSON.stringify(globalPatientData, null, 2);
-      fetch('http://127.0.0.1:5050/predict', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+      if (!globalPatientData) return alert("No patient data loaded.");
+      $('#prediction-result').text("Running prediction...");
+      fetch('http://127.0.0.1:5080/predict', { 
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(globalPatientData)
       })
       .then(response => response.json())
@@ -151,18 +193,13 @@
       });
     });
 
+    // F. “显示更多/更少”按钮的点击事件
     $(document).on('click', '.toggle-btn', function() {
       const target = $(this).data('target');
       const $ul = $('#' + target);
-      const expanded = $ul.hasClass('expanded');
-      if (expanded) {
-        $ul.removeClass('expanded').addClass('collapsible');
-        $(this).text('Show more...');
-      } else {
-        $ul.removeClass('collapsible').addClass('expanded');
-        $(this).text('Show less');
-      }
+      $ul.toggleClass('expanded collapsible');
+      $(this).text($ul.hasClass('expanded') ? 'Show less' : 'Show more...');
     });
-  </script>
+</script>
 </body>
 </html>
