@@ -183,7 +183,7 @@
           systolicbp: getBloodPressureValue(bloodPressureObs, '8480-6'),
           diastolicbp: getBloodPressureValue(bloodPressureObs, '8462-4'),
           hdl: getQuantityValueAndUnit(hdlObs[0]), // 取最新的记录
-          ldl: getQuantityValueAndUnit(ldlObs[0])  // 取最新的记录
+          ldl: getQuantityValueAndUnit(ldlObs[0]),  // 取最新的记录
           smoke: tobaccoObs.length > 0 ? 'Yes' : 'No'
       };
       
