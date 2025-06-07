@@ -79,6 +79,8 @@
     <!-- 数据更新情况展示-->
     <h3>Raw Observation Update</h3>
     <pre id="raw-observation-update" style="background:#f8f8f8; padding:10px; border-radius:6px;"></pre>
+    <h3>PU-SSI Risk Score and SHAP (from Observation)</h3>
+    <div id="pu-ssi-risk-score" style="background:#f8f8f8; padding:10px; border-radius:6px;"></div>
   </div>
 
 </div>
@@ -250,11 +252,31 @@
         });
 
         if (result.raw_observation_update) {
-          $('#raw-observation-update').text(
-            JSON.stringify(result.raw_observation_update, null, 2)
-          );
+          $('#raw-observation-update').text(JSON.stringify(result.raw_observation_update, null, 2));
+          // 1. 构造成 FHIR Bundle entry 结构
+          const newEntry = { resource: result.raw_observation_update };
+          // 2. 加入 observations
+          if (globalPatientData.observations && Array.isArray(globalPatientData.observations.entry)) {
+            globalPatientData.observations.entry.unshift(newEntry); // 放最前面
+          }
         } else {
           $('#raw-observation-update').text("Failed to write back patient's risk score.");
+        }
+
+        // 3. 重新生成 byCode/bank
+        const observations = (globalPatientData.observations && globalPatientData.observations.entry)
+          ? globalPatientData.observations.entry.map(e => e.resource)
+          : [];
+        const bank = byCode(observations);
+        const findObsByCode = byCodes(bank);
+
+        // 4. 现在可以用 findObsByCode('99999-9') 查到新 observation
+        const puSsiObs = findObsByCode('99999-9');
+        console.log('PU-SSI Risk Score and SHAP obs:', puSsiObs);
+
+        // 你可以用 getQuantityValueAndUnit(puSsiObs[0]) 或直接展示 valueString
+        if (puSsiObs.length > 0) {
+          $('#pu-ssi-risk-score').text(puSsiObs[0].valueString || 'N/A');
         }
       })
       .catch(error => { console.error('Error:', error); $('#prediction-result').text("Prediction failed."); });
