@@ -28,7 +28,6 @@
     .spinner .bounce1 { animation-delay: -0.32s; }
     .spinner .bounce2 { animation-delay: -0.16s; }
     @keyframes sk-bouncedelay { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
-    code.code-block { display: block; background-color: #eee; padding: 5px; border-radius: 3px; margin-top: 5px; white-space: pre-wrap; }
   </style>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -66,12 +65,12 @@
       <tr><th>HDL:</th><td id='hdl'></td></tr>
       <tr><th>Smoking Status:</th><td id='smoke'></td></tr>
     </table>
-
+    
     <!-- 终极版调试列表 -->
     <h3>All Available Observations (with Full Coding Array)</h3>
     <ul id="raw-observation-list" class="collapsible"></ul>
     <div class="toggle-btn" data-target="raw-observation-list">Show more...</div>
-    
+
     <h3>Conditions</h3><ul id="condition-list" class="collapsible"></ul><div class="toggle-btn" data-target="condition-list">Show more...</div>
     <h3>Procedures</h3><ul id="procedure-list" class="collapsible"></ul><div class="toggle-btn" data-target="procedure-list">Show more...</div>
     <h3>Encounters</h3><ul id="encounter-list" class="collapsible"></ul><div class="toggle-btn" data-target="encounter-list">Show more...</div>
@@ -88,7 +87,6 @@
     <!-- SHAP解释可视化模块 -->
     <h3>SHAP Explanation</h3>
     <canvas id="shap-chart" width="400" height="200" style="background:#fff;box-shadow:0 0 5px #ccc;"></canvas>
-    <!-- ...existing code... -->
   </div>
 
 </div>
@@ -96,9 +94,6 @@
 <script>
     let globalPatientData = null;
 
-    // ==================================================================
-    // 核心数据处理逻辑 (使用 byCode/byCodes 模式重构)
-    // ==================================================================
 
     function byCode(observations) {
         const bank = {};
@@ -123,6 +118,8 @@
                 const set = bank[code];
                 if (set) { ret.push(...set); }
             });
+            // 返回前按日期排序（最新的在最前面），确保我们总是获取最新的记录
+            ret.sort((a,b) => new Date(b.effectiveDateTime || b.issued) - new Date(a.effectiveDateTime || a.issued));
             return ret;
         }
     }
@@ -133,23 +130,15 @@
     }
 
     function getBloodPressureValue(obsArray, componentCode) {
-        // 血压记录可能有多条，我们需要找到最新的一条或最合适的一条
-        // 这里为了简单，我们先找第一条包含所需成分的记录
-        const bpObservation = obsArray.find(o => o.component && o.component.some(c => c.code?.coding?.some(coding => coding.code === componentCode)));
-        
-        if (!bpObservation) return 'N/A';
-
+        // 由于byCodes已经排序，我们只需取第一个即可
+        const bpObservation = obsArray[0];
+        if (!bpObservation || !bpObservation.component) return 'N/A';
         const component = bpObservation.component.find(c => c.code?.coding?.some(coding => coding.code === componentCode));
         if (component?.valueQuantity) {
             return `${component.valueQuantity.value} ${component.valueQuantity.unit || ''}`;
         }
         return 'N/A';
     }
-
-
-    // ==================================================================
-    // 页面主逻辑
-    // ==================================================================
 
     $(document).ready(function() {
       const urlParams = new URLSearchParams(window.location.search);
@@ -160,7 +149,6 @@
         fetch(`http://127.0.0.1:5080/get_patient_data?patient=${patientId}`, { credentials: 'include' })
           .then(response => { if (!response.ok) throw new Error('Failed to fetch data'); return response.json(); })
           .then(data => {
-            console.log("--- [DEBUG] Raw data received from backend ---", data);
             globalPatientData = data; 
             processAndDisplayData(data);
           })
@@ -175,13 +163,13 @@
       const obsBank = byCode(observations);
       const findObsByCode = byCodes(obsBank);
       
-      // 使用我们发现的正确编码来查找数据
-      const heightObs = findObsByCode('3137-7', '8302-2'); // 同时查找新旧两个编码，增加兼容性
-      const weightObs = findObsByCode('3141-9', '29463-7'); // 同时查找新旧两个编码，增加兼容性
-      const bmiObs = findObsByCode('39156-5', '39157-3'); // 同时查找新旧两个编码，增加兼容性
-      const bloodPressureObs = findObsByCode('85354-9');   // <-- 这里是关键的修改！
+      // --- 使用我们最终确认的所有正确编码来查找数据 ---
+      const heightObs = findObsByCode('8302-2', '3137-7');
+      const weightObs = findObsByCode('3141-9', '29463-7');
+      const bmiObs = findObsByCode('39156-5', '39157-3');
+      const bloodPressureObs = findObsByCode('85354-9'); 
       const hdlObs = findObsByCode('2085-9');
-      const ldlObs = findObsByCode('2089-1', '13457-7');
+      const ldlObs = findObsByCode('13457-7');
       const tobaccoObs = findObsByCode('88028-6');
 
       const processedData = {
@@ -192,11 +180,10 @@
           age: computeAge(patient.birthDate), // 计算年龄
           height: getQuantityValueAndUnit(heightObs[0]),
           weight: getQuantityValueAndUnit(weightObs[0]),
-          bmi: getQuantityValueAndUnit(bmiObs[0]),
           systolicbp: getBloodPressureValue(bloodPressureObs, '8480-6'),
           diastolicbp: getBloodPressureValue(bloodPressureObs, '8462-4'),
-          hdl: getQuantityValueAndUnit(hdlObs[0]),
-          ldl: getQuantityValueAndUnit(ldlObs[0]),
+          hdl: getQuantityValueAndUnit(hdlObs[0]), // 取最新的记录
+          ldl: getQuantityValueAndUnit(ldlObs[0])  // 取最新的记录
           smoke: tobaccoObs.length > 0 ? 'Yes' : 'No'
       };
       
@@ -207,43 +194,14 @@
       appendToList('#device-list', data.devices || []);
       appendToList('#allergy-list', data.allergies || []);
       
-      fillRawObservations(observations);
       drawVisualization(processedData);
-    }
-
-    function fillRawObservations(observations) {
-        const rawObsList = $('#raw-observation-list');
-        rawObsList.empty();
-        if (!observations || observations.length === 0) {
-            rawObsList.append('<li>No observations found for this patient.</li>');
-            return;
-        }
-        observations.forEach(obs => {
-            const obsText = obs.code?.text || 'Unnamed Observation';
-            const codesText = obs.code?.coding?.map(c => `{ system: "${c.system}", code: "${c.code}" }`).join(',\n') || 'No codes';
-            let obsValue = 'N/A';
-            if (obs.valueQuantity) {
-                obsValue = `${obs.valueQuantity.value} ${obs.valueQuantity.unit || ''}`;
-            } else if (obs.component && obs.component.length > 0) {
-                obsValue = obs.component.map(c => {
-                    const compValue = c.valueQuantity ? `${c.valueQuantity.value} ${c.valueQuantity.unit || ''}` : 'N/A';
-                    return `${c.code.text}: ${compValue}`;
-                }).join('; ');
-            } else if (obs.valueCodeableConcept) {
-                obsValue = obs.valueCodeableConcept.text || obs.valueCodeableConcept.coding?.[0]?.display || 'N/A';
-            } else if (obs.valueString) {
-                obsValue = obs.valueString;
-            }
-            rawObsList.append(`<li><strong>${obsText}</strong>: ${obsValue}<code class="code-block">Codings: [\n${codesText}\n]</code></li>`);
-        });
     }
 
     function drawVisualization(p) {
       $('#loading').hide(); $('#holder').show();
       $('#fname').text(p.fname); $('#lname').text(p.lname);
       $('#gender').text(p.gender); $('#birthdate').text(p.birthdate); $('#age').text(p.age);
-      $('#height').text(p.height); $('#weight').text(p.weight);
-      $('#bmi').text(p.bmi);
+      $('#height').text(p.height); $('#weight').text(p.weight); $('#bmi').text(p.bmi);
       $('#systolicbp').text(p.systolicbp); $('#diastolicbp').text(p.diastolicbp);
       $('#ldl').text(p.ldl); $('#hdl').text(p.hdl);
       $('#smoke').text(p.smoke);
@@ -274,7 +232,7 @@
       })
       .then(response => response.json())
       .then(result => { 
-        $('#prediction-result').text("Risk Score: " + result.risk_score); 
+        $('#prediction-result').text("Risk Score: " + result.risk_score);
         // 绘制风险分数柱状图
         const ctx1 = document.getElementById('risk-score-chart').getContext('2d');
         ctx1.clearRect(0, 0, 400, 200); // 清空画布
