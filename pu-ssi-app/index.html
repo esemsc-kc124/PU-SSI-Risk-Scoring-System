@@ -65,18 +65,6 @@
       <tr><th>HDL:</th><td id='hdl'></td></tr>
       <tr><th>Smoking Status:</th><td id='smoke'></td></tr>
     </table>
-    
-    <!-- 终极版调试列表 -->
-    <h3>All Available Observations (with Full Coding Array)</h3>
-    <ul id="raw-observation-list" class="collapsible"></ul>
-    <div class="toggle-btn" data-target="raw-observation-list">Show more...</div>
-
-    <h3>Conditions</h3><ul id="condition-list" class="collapsible"></ul><div class="toggle-btn" data-target="condition-list">Show more...</div>
-    <h3>Procedures</h3><ul id="procedure-list" class="collapsible"></ul><div class="toggle-btn" data-target="procedure-list">Show more...</div>
-    <h3>Encounters</h3><ul id="encounter-list" class="collapsible"></ul><div class="toggle-btn" data-target="encounter-list">Show more...</div>
-    <h3>Care Plans</h3><ul id="careplan-list" class="collapsible"></ul><div class="toggle-btn" data-target="careplan-list">Show more...</div>
-    <h3>Devices</h3><ul id="device-list" class="collapsible"></ul><div class="toggle-btn" data-target="device-list">Show more...</div>
-    <h3>Allergies</h3><ul id="allergy-list" class="collapsible"></ul><div class="toggle-btn" data-target="allergy-list">Show more...</div>
 
     <button id="predict-btn" class="big-button">Run Prediction</button>
     <pre id="prediction-result"></pre>
@@ -87,6 +75,10 @@
     <!-- SHAP解释可视化模块 -->
     <h3>SHAP Explanation</h3>
     <canvas id="shap-chart" width="400" height="200" style="background:#fff;box-shadow:0 0 5px #ccc;"></canvas>
+
+    <!-- 数据更新情况展示-->
+    <h3>Raw Observation Update</h3>
+    <pre id="raw-observation-update" style="background:#f8f8f8; padding:10px; border-radius:6px;"></pre>
   </div>
 
 </div>
@@ -256,6 +248,14 @@
           ctx2.fillStyle = '#333';
           ctx2.fillText(features[i], 60 + i*80, 170);
         });
+
+        if (result.raw_observation_update) {
+          $('#raw-observation-update').text(
+            JSON.stringify(result.raw_observation_update, null, 2)
+          );
+        } else {
+          $('#raw-observation-update').text("Failed to write back patient's risk score.");
+        }
       })
       .catch(error => { console.error('Error:', error); $('#prediction-result').text("Prediction failed."); });
     });
