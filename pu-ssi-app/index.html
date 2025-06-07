@@ -166,23 +166,6 @@
           })
           .catch(error => { console.error('Error fetching patient data:', error); $('#loading').hide(); alert('Failed to load patient data. Please try again.'); });
       }
-      const ctx1 = document.getElementById('risk-score-chart').getContext('2d');
-      ctx1.fillStyle = '#007BFF';
-      ctx1.fillRect(50, 150, 100, -80); // 假设风险分数80
-      ctx1.fillStyle = '#333';
-      ctx1.fillText('Risk Score: 80', 60, 170);
-
-      // 假数据占位：SHAP解释
-      const ctx2 = document.getElementById('shap-chart').getContext('2d');
-      // 假设有3个特征的SHAP值
-      const shapValues = [0.3, -0.2, 0.1];
-      const features = ['Age', 'BMI', 'BP'];
-      shapValues.forEach((v, i) => {
-        ctx2.fillStyle = v > 0 ? '#28a745' : '#dc3545';
-        ctx2.fillRect(60 + i*80, 150, 40, -v*100);
-        ctx2.fillStyle = '#333';
-        ctx2.fillText(features[i], 60 + i*80, 170);
-      });
     });
     
     function processAndDisplayData(data) {
@@ -289,7 +272,33 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(globalPatientData)
       })
-      .then(response => response.json()).then(result => { $('#prediction-result').text("Risk Score: " + result.risk_score); })
+      .then(response => response.json())
+      .then(result => { 
+        $('#prediction-result').text("Risk Score: " + result.risk_score); 
+        // 绘制风险分数柱状图
+        const ctx1 = document.getElementById('risk-score-chart').getContext('2d');
+        ctx1.clearRect(0, 0, 400, 200); // 清空画布
+        ctx1.fillStyle = '#007BFF';
+        // 假设最大分数100，柱状高度按比例、
+        const riskScoreNum = parseFloat(String(result.risk_score).replace('%', ''));
+        const barHeight = riskScoreNum * 1.5;
+        ctx1.fillRect(50, 150 - barHeight, 100, barHeight);
+        ctx1.fillStyle = '#333';
+        ctx1.fillText('Risk Score: ' + result.risk_score, 60, 170);
+
+        // 假数据占位：SHAP解释
+        const ctx2 = document.getElementById('shap-chart').getContext('2d');
+        ctx2.clearRect(0, 0, 400, 200);
+        // 如果后端返回shap_values和shap_features
+        const shapValues = result.shap_values || [];
+        const features = result.shap_features || [];
+        shapValues.forEach((v, i) => {
+          ctx2.fillStyle = v > 0 ? '#28a745' : '#dc3545';
+          ctx2.fillRect(60 + i*80, 150, 40, -v*100);
+          ctx2.fillStyle = '#333';
+          ctx2.fillText(features[i], 60 + i*80, 170);
+        });
+      })
       .catch(error => { console.error('Error:', error); $('#prediction-result').text("Prediction failed."); });
     });
 

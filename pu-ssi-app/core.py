@@ -86,4 +86,6 @@ def run_prediction(patient_data):
     接收病人数据，运行预测模型并返回结果
     """
     print("Received data for prediction inside core logic.")
-    return {"risk_score": "75.3%"}
+    return {"risk_score": "75.3%",
+            "shap_values": [0.3, -0.2, 0.1],
+            "shap_features": ["Age", "BMI", "BP"]}
