@@ -172,6 +172,22 @@
       const ldlObs = findObsByCode('13457-7');
       const tobaccoObs = findObsByCode('88028-6');
 
+      // --- 增加BMI的处理逻辑 ---
+      let bmiValue = getQuantityValueAndUnit(bmiObs[0]);
+      if (bmiValue === 'N/A') {
+          // 如果服务器没有直接提供BMI，我们就手动计算
+          const heightVal = parseFloat(getQuantityValueAndUnit(heightObs[0]));
+          const weightVal = parseFloat(getQuantityValueAndUnit(weightObs[0]));
+          if (!isNaN(heightVal) && !isNaN(weightVal) && heightVal > 0) {
+              const heightM = heightVal / 100; // 假设身高单位是cm
+              const bmi = weightVal / (heightM * heightM);
+              bmiValue = bmi.toFixed(2);
+          }
+      } else {
+          // 如果服务器提供了BMI，我们只取数值部分
+          bmiValue = parseFloat(bmiValue).toFixed(2);
+      }
+
       const processedData = {
           fname: name?.given?.join(' ') || 'N/A',
           lname: name?.family || 'N/A',
@@ -180,6 +196,7 @@
           age: computeAge(patient.birthDate), // 计算年龄
           height: getQuantityValueAndUnit(heightObs[0]),
           weight: getQuantityValueAndUnit(weightObs[0]),
+          bmi: bmiValue, 
           systolicbp: getBloodPressureValue(bloodPressureObs, '8480-6'),
           diastolicbp: getBloodPressureValue(bloodPressureObs, '8462-4'),
           hdl: getQuantityValueAndUnit(hdlObs[0]), // 取最新的记录
