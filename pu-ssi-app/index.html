@@ -65,6 +65,13 @@
       <tr><th>HDL:</th><td id='hdl'></td></tr>
       <tr><th>Smoking Status:</th><td id='smoke'></td></tr>
     </table>
+    
+    <h3>Conditions</h3><ul id="condition-list" class="collapsible"></ul><div class="toggle-btn" data-target="condition-list">Show more...</div>
+    <h3>Procedures</h3><ul id="procedure-list" class="collapsible"></ul><div class="toggle-btn" data-target="procedure-list">Show more...</div>
+    <h3>Encounters</h3><ul id="encounter-list" class="collapsible"></ul><div class="toggle-btn" data-target="encounter-list">Show more...</div>
+    <h3>Care Plans</h3><ul id="careplan-list" class="collapsible"></ul><div class="toggle-btn" data-target="careplan-list">Show more...</div>
+    <h3>Devices</h3><ul id="device-list" class="collapsible"></ul><div class="toggle-btn" data-target="device-list">Show more...</div>
+    <h3>Allergies</h3><ul id="allergy-list" class="collapsible"></ul><div class="toggle-btn" data-target="allergy-list">Show more...</div>
 
     <button id="predict-btn" class="big-button">Run Prediction</button>
     <pre id="prediction-result"></pre>
@@ -87,7 +94,6 @@
 
 <script>
     let globalPatientData = null;
-
 
     function byCode(observations) {
         const bank = {};
