@@ -1,6 +1,8 @@
 import requests
 import json
 import concurrent.futures
+import datetime
+
 
 # --- FHIR Server Configuration ---
 FHIR_BASE_URL = "https://fhir-myrecord.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d"
@@ -91,4 +93,40 @@ def get_patient_data_bundle(provider_token, patient_id):
 def run_prediction(patient_data):
     """接收病人数据，运行预测模型并返回结果"""
     print("Received data for prediction inside core logic.")
-    return {"risk_score": "75.3%"}
+
+    # 假设预测结果
+    risk_score = "75.3%"
+    shap_values = [0.1, -0.05, 0.2]
+    shap_features = ["Age", "BMI", "BP"]
+
+    # 构造 Observation 资源
+    now = datetime.datetime.utcnow().isoformat() + "Z"
+    new_observation = {
+        "resourceType": "Observation",
+        "status": "final",
+        "category": [{
+            "coding": [{
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory",
+                "display": "Laboratory"
+            }]
+        }],
+        "code": {
+            "coding": [{
+                "system": "http://loinc.org",
+                "code": "99999-9",  # 你可以自定义一个code
+                "display": "PU-SSI Risk Score and SHAP"
+            }],
+            "text": "PU-SSI Risk Score and SHAP"
+        },
+        "subject": patient_data.get("patient", {}).get("id", "Unknown"),
+        "effectiveDateTime": now,
+        "issued": now,
+        "valueString": f"Risk Score: {risk_score}; SHAP: {dict(zip(
+            shap_features, shap_values))}"
+    }
+
+    return {"risk_score": risk_score,
+            "shap_values": shap_values,
+            "shap_features": shap_features,
+            "raw_observation_update": new_observation}

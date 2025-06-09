@@ -30,6 +30,7 @@
     @keyframes sk-bouncedelay { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1.0); } }
   </style>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 <div class="container">
@@ -50,15 +51,19 @@
       <tr><th>Last Name:</th><td id='lname'></td></tr>
       <tr><th>Gender:</th><td id='gender'></td></tr>
       <tr><th>Date of Birth:</th><td id='birthdate'></td></tr>
+      <tr><th>Age:</th><td id='age'></td></tr>
     </table>
     
     <h3>Key Observations</h3>
     <table>
       <tr><th>Height:</th><td id='height'></td></tr>
+      <tr><th>Weight:</th><td id='weight'></td></tr>
+      <tr><th>BMI:</th><td id='bmi'></td></tr>
       <tr><th>Systolic BP:</th><td id='systolicbp'></td></tr>
       <tr><th>Diastolic BP:</th><td id='diastolicbp'></td></tr>
       <tr><th>LDL:</th><td id='ldl'></td></tr>
       <tr><th>HDL:</th><td id='hdl'></td></tr>
+      <tr><th>Smoking Status:</th><td id='smoke'></td></tr>
     </table>
     
     <h3>Conditions</h3><ul id="condition-list" class="collapsible"></ul><div class="toggle-btn" data-target="condition-list">Show more...</div>
@@ -70,6 +75,19 @@
 
     <button id="predict-btn" class="big-button">Run Prediction</button>
     <pre id="prediction-result"></pre>
+    <!-- 风险分数可视化模块 -->
+    <h3>Risk Score Visualization</h3>
+    <canvas id="risk-score-chart" width="400" height="200" style="background:#fff;box-shadow:0 0 5px #ccc;margin-bottom:20px;"></canvas>
+
+    <!-- SHAP解释可视化模块 -->
+    <h3>SHAP Explanation</h3>
+    <canvas id="shap-chart" width="400" height="200" style="background:#fff;box-shadow:0 0 5px #ccc;"></canvas>
+
+    <!-- 数据更新情况展示-->
+    <h3>Raw Observation Update</h3>
+    <pre id="raw-observation-update" style="background:#f8f8f8; padding:10px; border-radius:6px;"></pre>
+    <h3>PU-SSI Risk Score and SHAP (from Observation)</h3>
+    <div id="pu-ssi-risk-score" style="background:#f8f8f8; padding:10px; border-radius:6px;"></div>
   </div>
 
 </div>
@@ -147,20 +165,26 @@
       
       // --- 使用我们最终确认的所有正确编码来查找数据 ---
       const heightObs = findObsByCode('8302-2', '3137-7');
+      const weightObs = findObsByCode('3141-9', '29463-7');
+      const bmiObs = findObsByCode('39156-5', '39157-3');
       const bloodPressureObs = findObsByCode('85354-9'); 
       const hdlObs = findObsByCode('2085-9');
       const ldlObs = findObsByCode('13457-7');
+      const tobaccoObs = findObsByCode('88028-6');
 
       const processedData = {
           fname: name?.given?.join(' ') || 'N/A',
           lname: name?.family || 'N/A',
           gender: patient.gender || 'N/A',
           birthdate: patient.birthDate || 'N/A',
+          age: computeAge(patient.birthDate), // 计算年龄
           height: getQuantityValueAndUnit(heightObs[0]),
+          weight: getQuantityValueAndUnit(weightObs[0]),
           systolicbp: getBloodPressureValue(bloodPressureObs, '8480-6'),
           diastolicbp: getBloodPressureValue(bloodPressureObs, '8462-4'),
           hdl: getQuantityValueAndUnit(hdlObs[0]), // 取最新的记录
-          ldl: getQuantityValueAndUnit(ldlObs[0])  // 取最新的记录
+          ldl: getQuantityValueAndUnit(ldlObs[0]),  // 取最新的记录
+          smoke: tobaccoObs.length > 0 ? 'Yes' : 'No'
       };
       
       appendToList('#condition-list', data.conditions || []);
@@ -176,15 +200,26 @@
     function drawVisualization(p) {
       $('#loading').hide(); $('#holder').show();
       $('#fname').text(p.fname); $('#lname').text(p.lname);
-      $('#gender').text(p.gender); $('#birthdate').text(p.birthdate);
-      $('#height').text(p.height); $('#systolicbp').text(p.systolicbp);
-      $('#diastolicbp').text(p.diastolicbp); $('#ldl').text(p.ldl); $('#hdl').text(p.hdl);
+      $('#gender').text(p.gender); $('#birthdate').text(p.birthdate); $('#age').text(p.age);
+      $('#height').text(p.height); $('#weight').text(p.weight); $('#bmi').text(p.bmi);
+      $('#systolicbp').text(p.systolicbp); $('#diastolicbp').text(p.diastolicbp);
+      $('#ldl').text(p.ldl); $('#hdl').text(p.hdl);
+      $('#smoke').text(p.smoke);
     }
 
     function appendToList(selector, items) {
       const $el = $(selector); $el.empty();
       if (!items || items.length === 0) { $el.append('<li>No data available</li>'); }
       else { items.forEach(i => $el.append(`<li>${i || 'No Description'}</li>`)); }
+    }
+
+    // 辅助函数：计算年龄
+    function computeAge(birthDate) {
+      const bd = new Date(birthDate);
+      const today = new Date();
+      const age = today.getFullYear() - bd.getFullYear() - 
+                  (today < new Date(today.getFullYear(), bd.getMonth(), bd.getDate()) ? 1 : 0);
+      return age >= 0 ? age : 'N/A';
     }
 
     $(document).on('click', '#predict-btn', function() {
@@ -195,7 +230,61 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(globalPatientData)
       })
-      .then(response => response.json()).then(result => { $('#prediction-result').text("Risk Score: " + result.risk_score); })
+      .then(response => response.json())
+      .then(result => { 
+        $('#prediction-result').text("Risk Score: " + result.risk_score);
+        // 绘制风险分数柱状图
+        const ctx1 = document.getElementById('risk-score-chart').getContext('2d');
+        ctx1.clearRect(0, 0, 400, 200); // 清空画布
+        ctx1.fillStyle = '#007BFF';
+        // 假设最大分数100，柱状高度按比例、
+        const riskScoreNum = parseFloat(String(result.risk_score).replace('%', ''));
+        const barHeight = riskScoreNum * 1.5;
+        ctx1.fillRect(50, 150 - barHeight, 100, barHeight);
+        ctx1.fillStyle = '#333';
+        ctx1.fillText('Risk Score: ' + result.risk_score, 60, 170);
+
+        // 假数据占位：SHAP解释
+        const ctx2 = document.getElementById('shap-chart').getContext('2d');
+        ctx2.clearRect(0, 0, 400, 200);
+        // 如果后端返回shap_values和shap_features
+        const shapValues = result.shap_values || [];
+        const features = result.shap_features || [];
+        shapValues.forEach((v, i) => {
+          ctx2.fillStyle = v > 0 ? '#28a745' : '#dc3545';
+          ctx2.fillRect(60 + i*80, 150, 40, -v*100);
+          ctx2.fillStyle = '#333';
+          ctx2.fillText(features[i], 60 + i*80, 170);
+        });
+
+        if (result.raw_observation_update) {
+          $('#raw-observation-update').text(JSON.stringify(result.raw_observation_update, null, 2));
+          // 1. 构造成 FHIR Bundle entry 结构
+          const newEntry = { resource: result.raw_observation_update };
+          // 2. 加入 observations
+          if (globalPatientData.observations && Array.isArray(globalPatientData.observations.entry)) {
+            globalPatientData.observations.entry.unshift(newEntry); // 放最前面
+          }
+        } else {
+          $('#raw-observation-update').text("Failed to write back patient's risk score.");
+        }
+
+        // 3. 重新生成 byCode/bank
+        const observations = (globalPatientData.observations && globalPatientData.observations.entry)
+          ? globalPatientData.observations.entry.map(e => e.resource)
+          : [];
+        const bank = byCode(observations);
+        const findObsByCode = byCodes(bank);
+
+        // 4. 现在可以用 findObsByCode('99999-9') 查到新 observation
+        const puSsiObs = findObsByCode('99999-9');
+        console.log('PU-SSI Risk Score and SHAP obs:', puSsiObs);
+
+        // 你可以用 getQuantityValueAndUnit(puSsiObs[0]) 或直接展示 valueString
+        if (puSsiObs.length > 0) {
+          $('#pu-ssi-risk-score').text(puSsiObs[0].valueString || 'N/A');
+        }
+      })
       .catch(error => { console.error('Error:', error); $('#prediction-result').text("Prediction failed."); });
     });
 
