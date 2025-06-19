@@ -38,7 +38,7 @@
   <div id="login-container">
     <h1>Welcome to the PU/SSI Risk Scoring System</h1>
     <p>Please log in with your provider credentials to begin.</p>
-    <a href="http://127.0.0.1:5080/launch" class="big-button">Login with FHIR</a>
+    <a href="/launch" class="big-button">Login with FHIR</a>
   </div>
 
   <div id="loading" class="spinner" style="display: none;"></div>
@@ -146,7 +146,7 @@
       if (patientId) {
         $('#login-container').hide();
         $('#loading').show();
-        fetch(`http://127.0.0.1:5080/get_patient_data?patient=${patientId}`, { credentials: 'include' })
+        fetch(`/get_patient_data?patient=${patientId}`, { credentials: 'include' })
           .then(response => { if (!response.ok) throw new Error('Failed to fetch data'); return response.json(); })
           .then(data => {
             globalPatientData = data; 
@@ -242,7 +242,7 @@
     $(document).on('click', '#predict-btn', function() {
       if (!globalPatientData) return alert("No patient data loaded.");
       $('#prediction-result').text("Running prediction...");
-      fetch('http://127.0.0.1:5080/predict', { 
+      fetch('/predict', { 
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(globalPatientData)

@@ -110,7 +110,7 @@
             $('#results-body').empty();
             $('#search-message').hide();
             $('#search-spinner').show();
-            const apiUrl = `http://127.0.0.1:5080/api/get-patient-page?url=${encodeURIComponent(url)}`;
+            const apiUrl = `/api/get-patient-page?url=${encodeURIComponent(url)}`;
             fetchApi(apiUrl)
                 .then(handleApiResponse)
                 .catch(handleError);
@@ -121,7 +121,7 @@
             $('#search-message').hide();
             $('#search-spinner').show();
             
-            const url = `http://127.0.0.1:5080/api/search-patients?name=${encodeURIComponent(patientName)}`;
+            const url = `/api/search-patients?name=${encodeURIComponent(patientName)}`;
             fetchApi(url)
                 .then(handleApiResponse)
                 .catch(handleError);

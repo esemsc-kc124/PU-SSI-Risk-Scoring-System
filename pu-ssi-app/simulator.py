@@ -1,22 +1,27 @@
-from flask import Flask, redirect, request, jsonify, session
+from flask import Flask, redirect, request, jsonify, session, send_from_directory
 from flask_cors import CORS
 import requests
 import secrets
 import core
 from urllib.parse import unquote
+import os # 导入os库来读取环境变量
 
 # --- App Setup ---
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static') # 将 'static' 文件夹设置为静态文件目录
 # 在开发中使用一个固定的字符串作为密钥，防止服务重启导致session失效
 app.secret_key = 'a-very-secret-key-that-will-not-change'
-CORS(app, supports_credentials=True, origins="http://127.0.0.1:8000")
+# 不再限制origins，因为前端现在由同一个服务器提供
+CORS(app, supports_credentials=True)
 
 
 # --- FHIR Server and Auth Configuration ---
 AUTH_URL = "https://authorization.cerner.com/tenants/ec2458f2-1e24-41c8-b71b-0e701af7583d/protocols/oauth2/profiles/smart-v1/personas/provider/authorize"
 TOKEN_URL = "https://authorization.cerner.com/tenants/ec2458f2-1e24-41c8-b71b-0e701af7583d/protocols/oauth2/profiles/smart-v1/token"
 CLIENT_ID = "1c0273a7-696e-40ae-bd9a-e593b7349ced"
-REDIRECT_URI = "http://127.0.0.1:5080/callback"
+
+# --- 关键修改：智能地设置回调地址 ---
+# 在云端部署时，我们会设置一个环境变量。在本地开发时，它会自动使用默认值。
+REDIRECT_URI = os.environ.get('REDIRECT_URI', 'http://127.0.0.1:5080/callback')
 
 
 # --- Helper Function to process FHIR Bundle ---
@@ -37,91 +42,52 @@ def process_fhir_bundle(bundle):
             
     return {"patients": patients, "links": links}
 
-# --- API Endpoints ---
+# --- API Endpoints (no changes needed here) ---
 
 @app.route('/api/search-patients')
 def search_patients_api():
-    """Initiates a new search for patients with detailed logging."""
-    print("\n--- [API] Received request for /api/search-patients ---")
-    
     provider_token = session.get('provider_access_token')
     if not provider_token:
-        print("[ERROR] No 'provider_access_token' found in session. Aborting with 401.")
         return jsonify({"error": "Not authenticated or session expired. Please log in again."}), 401
-    print("[INFO] Access token found in session.")
     
     patient_name = request.args.get('name')
-    
     if not patient_name:
-        print("[INFO] No search term provided. Returning empty result.")
         return jsonify({"patients": [], "links": {}})
-
-    print(f"[INFO] Search term provided: '{patient_name}'")
 
     search_url = f"{core.FHIR_BASE_URL}/Patient"
     headers = {"Authorization": f"Bearer {provider_token}", "Accept": "application/fhir+json"}
-    
-    params = {
-        "_count": 20, 
-        "name": patient_name
-        # 移除了排序参数，因为服务器不支持
-        # "_sort": "-birthdate"
-    }
-    
-    print(f"[INFO] Sending request to Cerner: {search_url} with params: {params}")
+    params = {"_count": 20, "name": patient_name}
     
     try:
         response = requests.get(search_url, headers=headers, params=params)
-        print(f"[INFO] Received response from Cerner with status code: {response.status_code}")
         response.raise_for_status()
-        
-        bundle = response.json()
-        processed_data = process_fhir_bundle(bundle)
-        
-        print(f"[INFO] Successfully processed bundle. Found {len(processed_data['patients'])} patients.")
-        print(f"[INFO] Pagination links found: {list(processed_data['links'].keys())}")
-        
+        processed_data = process_fhir_bundle(response.json())
         return jsonify(processed_data)
     except requests.exceptions.RequestException as e:
-        print(f"[ERROR] Exception during request to Cerner: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/get-patient-page')
 def get_patient_page_api():
-    """Fetches a specific page of patient results with detailed logging."""
-    print("\n--- [API] Received request for /api/get-patient-page ---")
-
     provider_token = session.get('provider_access_token')
     if not provider_token:
-        print("[ERROR] No 'provider_access_token' found in session. Aborting with 401.")
         return jsonify({"error": "Not authenticated or session expired. Please log in again."}), 401
-    print("[INFO] Access token found in session.")
-
+    
     page_url = request.args.get('url')
     if not page_url:
-        print("[ERROR] 'url' parameter is missing.")
         return jsonify({"error": "URL parameter is missing"}), 400
     
     decoded_url = unquote(page_url)
-    print(f"[INFO] Sending request to Cerner for next page: {decoded_url}")
-    
     headers = {"Authorization": f"Bearer {provider_token}", "Accept": "application/fhir+json"}
     
     try:
         response = requests.get(decoded_url, headers=headers)
-        print(f"[INFO] Received response from Cerner with status code: {response.status_code}")
         response.raise_for_status()
-        
-        bundle = response.json()
-        processed_data = process_fhir_bundle(bundle)
-        
-        print(f"[INFO] Successfully processed bundle. Found {len(processed_data['patients'])} patients on this page.")
+        processed_data = process_fhir_bundle(response.json())
         return jsonify(processed_data)
     except requests.exceptions.RequestException as e:
-        print(f"[ERROR] Exception during request to Cerner: {e}")
         return jsonify({"error": str(e)}), 500
 
-# --- Other routes remain the same ---
+# --- Auth Routes ---
 @app.route('/launch')
 def launch():
     state = secrets.token_urlsafe(16)
@@ -132,20 +98,10 @@ def launch():
 
 @app.route('/callback')
 def callback():
-    print("\n--- [AUTH] Received request for /callback ---")
-    if 'error' in request.args: 
-        print(f"[ERROR] Authorization failed: {request.args.get('error')}")
-        return f"Authorization failed: {request.args.get('error')}", 400
-    
+    if 'error' in request.args: return f"Authorization failed: {request.args.get('error')}", 400
     auth_code = request.args.get('code')
-    if not auth_code: 
-        print("[ERROR] No authorization code received.")
-        return "Error: No authorization code received.", 400
-    
-    if request.args.get('state') != session.get('state'):
-        print("[ERROR] State mismatch.")
-        return "Error: State mismatch.", 400
-    
+    if not auth_code: return "Error: No authorization code received.", 400
+    if request.args.get('state') != session.get('state'): return "Error: State mismatch.", 400
     session.pop('state', None)
     token_params = { 'grant_type': 'authorization_code', 'code': auth_code, 'redirect_uri': REDIRECT_URI, 'client_id': CLIENT_ID }
     
@@ -153,12 +109,12 @@ def callback():
         response = requests.post(TOKEN_URL, data=token_params)
         response.raise_for_status()
         session['provider_access_token'] = response.json().get('access_token')
-        print("[INFO] Provider access token successfully obtained and stored in session.")
-        return redirect("http://127.0.0.1:8000/search.html")
+        # --- 关键修改：重定向到相对路径，而不是写死的本地地址 ---
+        return redirect("/search.html")
     except requests.exceptions.RequestException as e:
-        print(f"[ERROR] Failed to exchange code for token: {e}")
         return "Failed to get access token.", 500
 
+# --- Prediction and Data Routes ---
 @app.route('/get_patient_data')
 def get_patient_data():
     provider_token = session.get('provider_access_token')
@@ -176,5 +132,19 @@ def predict():
     prediction_result = core.run_prediction(patient_data)
     return jsonify(prediction_result)
 
+# --- 新增的路由，用于提供前端HTML文件 ---
+# --- NEW routes to serve frontend HTML files ---
+@app.route('/')
+def serve_root():
+    # 当用户访问根目录时，返回 index.html
+    return send_from_directory('static', 'index.html')
+
+@app.route('/<path:path>')
+def serve_static_files(path):
+    # 这个路由会提供所有在static文件夹里的文件，包括 search.html
+    return send_from_directory('static', path)
+
 if __name__ == '__main__':
-    app.run(port=5080, debug=True)
+    # 修改为监听0.0.0.0:8080以适应云端部署
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port, debug=False)
